@@ -1,0 +1,35 @@
+//
+// Implements the character I/O subsystem for the A4X firmware.
+//
+
+#INCLUDE "<inc>/a4x.hjk"
+#INCLUDE "<inc>/Rtl.hjk"
+
+FwCurrentCioBlock : ^FwCioBlock
+
+EXTERN FN FwSerialInitialize ()
+EXTERN FwSerialCioBlock : FwCioBlock
+
+FN FwCioEarlyInitialize ()
+
+    // Perform early initialization.
+
+    FwSerialInitialize ()
+
+    // Just hardwire the character I/O block to the serial block, since we don't
+    // know what we have yet.
+
+    FwCurrentCioBlock = &FwSerialCioBlock
+END
+
+FN FwCioPutCharacter (
+    IN byte : UWORD,
+)
+
+    FwCurrentCioBlock^.Write ( byte )
+END
+
+FN FwCioGetCharacter () : UWORD
+
+    RETURN FwCurrentCioBlock^.Read ()
+END

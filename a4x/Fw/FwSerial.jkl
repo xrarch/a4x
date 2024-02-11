@@ -1,0 +1,60 @@
+//
+// Implements the barebones serial character I/O driver.
+//
+
+#INCLUDE "<inc>/Rtl.hjk"
+#INCLUDE "<inc>/a4x.hjk"
+
+#DEFINE SERIAL_CMD  0xF8000040
+#DEFINE SERIAL_DATA 0xF8000044
+
+FN (FwCioWriteF) FwSerialWrite (
+    IN byte : UWORD,
+)
+
+    // Write a character to the serial port.
+
+    cmdport := CAST SERIAL_CMD TO ^UBYTE
+    dataport := CAST SERIAL_DATA TO ^UBYTE
+
+    WHILE cmdport^ DO END
+
+    IF byte == '\n' THEN
+        dataport^ = '\r'
+
+        WHILE cmdport^ DO END
+    END
+
+    dataport^ = byte
+END
+
+FN (FwCioReadF) FwSerialRead () : UWORD
+
+    // Read a character from the serial port.
+    // Non-blocking. Return -1 if none available.
+
+    dataport := CAST SERIAL_DATA TO ^UINT
+
+    char := dataport^
+
+    IF char == 0xFFFF THEN
+        RETURN -1
+    END
+
+    RETURN char
+END
+
+// Force the table into the text section so that it stays in ROM.
+
+#SECTION "text"
+PUBLIC FwSerialCioBlock : FwCioBlock = {
+    [Write] = &FwSerialWrite,
+    [Read] = &FwSerialRead,
+}
+
+FN FwSerialInitialize ()
+
+    // Initialize the serial port.
+
+    // XXX Do nothing.
+END

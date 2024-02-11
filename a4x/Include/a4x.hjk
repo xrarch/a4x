@@ -1,0 +1,22 @@
+#DEFINE XR_ROM_START 0xFFFE0000
+
+// Make sure to update the linker move expression if you change this.
+
+#DEFINE A4X_DATA_START 0x2000
+
+FNPTR FwCioWriteF (
+    IN byte : UWORD,
+)
+
+FNPTR FwCioReadF () : UWORD
+
+STRUCT FwCioBlock
+    Write : FwCioWriteF,
+    Read : FwCioReadF,
+END
+
+EXTERN FN FwCioPutCharacter (
+    IN byte : UWORD,
+)
+
+EXTERN FN FwCioGetCharacter () : UWORD

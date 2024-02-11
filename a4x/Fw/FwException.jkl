@@ -1,0 +1,13 @@
+//
+// Contains the exception handler for the firmware.
+//
+
+#INCLUDE "<inc>/a4x.hjk"
+
+#ASM [
+
+FwxExceptionVector:
+.global FwxExceptionVector
+    j    FwxExceptionVector
+
+]

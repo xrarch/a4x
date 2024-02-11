@@ -1,0 +1,24 @@
+//
+// Contains the main routines for the firmware.
+//
+
+#INCLUDE "<inc>/a4x.hjk"
+#INCLUDE "<inc>/Rtl.hjk"
+
+EXTERN FN FwCioEarlyInitialize ()
+
+FNPTR Something ()
+
+FN FwMain ()
+    
+    // Main routine for the firmware.
+
+    // First initialize the character I/O subsystem.
+
+    FwCioEarlyInitialize ()
+
+    // Now we can say hello.
+
+    RtlPrint ( "\n    XR/STATION Firmware (c) 2024\n" )
+
+END

@@ -1,0 +1,43 @@
+//
+// Contains reset for the firmware.
+//
+
+#INCLUDE "<inc>/Rtl.hjk"
+#INCLUDE "<inc>/a4x.hjk"
+
+EXTERN FN FwMain ()
+
+// Declare special linker symbols for us to use.
+
+EXTERN _bss : UBYTE
+EXTERN _bss_size : UBYTE
+EXTERN _data : UBYTE
+EXTERN _data_size : UBYTE
+EXTERN _text_size : UBYTE
+
+FN FwReset ()
+
+    // First, zero out bss.
+
+    RtlFillMemoryWithUlong (
+        &_bss, // dest
+        CAST &_bss_size TO UWORD, // size
+        0x00000000, // ulong
+    )
+
+    // Now copy the data section from ROM.
+    // We assume that the ROM is in the order of text -> data -> bss.
+    // Therefore, data should be at XR_ROM_START + text_size.
+
+    RtlCopyBytes (
+        &_data, // dest
+        &_text_size + XR_ROM_START, // src
+        CAST &_data_size TO UWORD, // sz
+    )
+
+    // Now jump to FwMain.
+
+    FwMain ()
+
+    WHILE TRUE DO END
+END
