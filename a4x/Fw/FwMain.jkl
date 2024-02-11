@@ -85,6 +85,4 @@ FN FwProcessorStartup (
     FwDeviceDatabase.Processor[procid].Present = TRUE
 
     WHILE TRUE DO END
-    WHILE TRUE DO END
-    WHILE TRUE DO END
 END

@@ -43,9 +43,7 @@ FN FwSendIpi (
     IN context : ^VOID
 ) : UBYTE
 
-    // Write the IPI interrupt into the LSIC interrupt pending register for the
-    // target processor.
-
+    // Send an IPI packet to the specified processor.
     // Returns TRUE if successful, FALSE if timeout.
 
     packet : FwIpiPacket
@@ -55,6 +53,9 @@ FN FwSendIpi (
     packet.Context = context
 
     FwPendingPackets[targetid] = &packet
+
+    // Write the IPI interrupt into the LSIC interrupt pending register for the
+    // target processor.
 
     lsic := &(CAST IO_LSIC_BASE TO ^IoLsicTable)^.Table[targetid]
 
