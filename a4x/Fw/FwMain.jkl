@@ -8,9 +8,22 @@
 EXTERN FN FwCioEarlyInitialize ()
 EXTERN FN FwProbeDevices ()
 
+EXTERN FN FwInitializeInterrupts (
+    IN procid : ULONG,
+)
+
+FN (FwIpiF) FwTestIpiFunction (
+    IN context : ^VOID,
+)
+
+    RtlPrint ( "Hello from %x! Context is %d\n", FwxGetProcessorId (), context )
+END
+
 FN FwMain ()
     
     // Main routine for the firmware.
+
+    FwInitializeInterrupts ( 0 )
 
     // First initialize the character I/O subsystem.
 
@@ -18,9 +31,60 @@ FN FwMain ()
 
     // Now we can say hello.
 
-    RtlPrint ( "\n    XR/STATION Firmware (c) 2024\n" )
+    RtlPrint ( "\n    XR/STATION a4x Firmware (c) 2024\n" )
 
     // Now probe the devices to fill in the device database.
 
     FwProbeDevices ()
+
+    FwIdle ( 200000 )
+
+    RtlPrint ( "Sending IPI to processor 2\n" )
+
+    FwSendIpi (
+        2, // targetid
+        &FwTestIpiFunction, // function
+        CAST 10 TO ^VOID, // context
+    )
+
+    FwSendIpi (
+        2, // targetid
+        &FwTestIpiFunction, // function
+        CAST 10 TO ^VOID, // context
+    )
+
+    FwSendIpi (
+        2, // targetid
+        &FwTestIpiFunction, // function
+        CAST 10 TO ^VOID, // context
+    )
+
+    FwSendIpi (
+        2, // targetid
+        &FwTestIpiFunction, // function
+        CAST 10 TO ^VOID, // context
+    )
+
+    RtlPrint ( "Done\n" )
+END
+
+FN FwProcessorStartup (
+    IN procid : UWORD,
+)
+    
+    // This is the startup routine for non-boot processors.
+
+    // We have to initialize our interrupt controller to mask everything except
+    // IPIs, and then enable interrupts. Note that before the first IPI, we have
+    // zero clue what has been initialized or hasn't, so don't touch anything!
+
+    FwInitializeInterrupts ( procid )
+
+    // Indicate our presence in the device database.
+
+    FwDeviceDatabase.Processor[procid].Present = TRUE
+
+    WHILE TRUE DO END
+    WHILE TRUE DO END
+    WHILE TRUE DO END
 END

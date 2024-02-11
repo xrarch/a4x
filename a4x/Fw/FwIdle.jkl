@@ -1,0 +1,22 @@
+//
+// Implements idling for the firmware.
+//
+
+#INCLUDE "<inc>/a4x.hjk"
+
+FN FwIdle (
+    IN count : UWORD,
+)
+
+    // Idle for the specified count.
+
+    clockdata := CAST IO_RTC_DATA TO ^ULONG
+
+    WHILE count DO
+        junk := clockdata^
+
+        BARRIER
+
+        count -= 1
+    END
+END

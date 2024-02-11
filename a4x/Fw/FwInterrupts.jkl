@@ -1,0 +1,101 @@
+//
+// Implements interrupt management for the firmware.
+//
+
+#INCLUDE "<inc>/a4x.hjk"
+#INCLUDE "<inc>/Rtl.hjk"
+
+EXTERN FN FwxEnableInterrupts ()
+
+FN FwInitializeInterrupts (
+    IN procid : UWORD,
+)
+
+    // Initialize the LSIC for the current processor.
+
+    mylsic := &(CAST IO_LSIC_BASE TO ^IoLsicTable)^.Table[procid]
+
+    mylsic^.Mask0 = 0x00000001
+    BARRIER
+    
+    mylsic^.Mask1 = 0x00000000
+    BARRIER
+
+    mylsic^.Pending0 = 0
+    BARRIER
+
+    mylsic^.Pending1 = 0
+    BARRIER
+
+    mylsic^.Ipl = 63
+    BARRIER
+
+    // Now enable interrupts on the current processor.
+
+    FwxEnableInterrupts ()
+END
+
+FwPendingPackets : ^FwIpiPacket[FW_PROCESSOR_MAX]
+
+FN FwSendIpi (
+    IN targetid : ULONG,
+    IN function : FwIpiF,
+    IN context : ^VOID
+) : UBYTE
+
+    // Write the IPI interrupt into the LSIC interrupt pending register for the
+    // target processor.
+
+    // Returns TRUE if successful, FALSE if timeout.
+
+    packet : FwIpiPacket
+
+    packet.Acknowledged = FALSE
+    packet.Function = function
+    packet.Context = context
+
+    FwPendingPackets[targetid] = &packet
+
+    lsic := &(CAST IO_LSIC_BASE TO ^IoLsicTable)^.Table[targetid]
+
+    lsic^.Pending0 = 0x00000002
+
+    // Wait for packet.
+
+    timeout := 50000000
+
+    WHILE NOT packet.Acknowledged AND timeout DO
+        BARRIER
+
+        timeout -= 1
+    END
+
+    IF timeout == 0 THEN
+        // Count ran down. Timeout.
+
+        RtlPrint ( "Warning: IPI timeout on processor %d\n", targetid )
+
+        RETURN FALSE
+    END
+
+    RETURN TRUE
+END
+
+FN FwServiceIpi (
+    IN procid : ULONG,
+)
+
+    // Called by the exception handler when an IPI is received.
+    // Performs the function specified in the packet and signals it as
+    // acknowledged.
+
+    packet := FwPendingPackets[procid]
+
+    packet^.Function ( packet^.Context )
+
+    lsic := &(CAST IO_LSIC_BASE TO ^IoLsicTable)^.Table[procid]
+
+    lsic^.ClaimComplete = 1
+
+    packet^.Acknowledged = TRUE
+END

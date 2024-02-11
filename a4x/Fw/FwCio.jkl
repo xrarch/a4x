@@ -26,6 +26,10 @@ FN FwCioPutCharacter (
     IN byte : UWORD,
 )
 
+    IF byte == '\n' THEN
+        FwCurrentCioBlock^.Write ( '\r' )
+    END
+
     FwCurrentCioBlock^.Write ( byte )
 END
 

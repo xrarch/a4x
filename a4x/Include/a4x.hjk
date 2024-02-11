@@ -2,10 +2,6 @@
 
 #DEFINE XR_ROM_START 0xFFFE0000
 
-// Make sure to update the linker move expression if you change this.
-
-#DEFINE A4X_DATA_START 0x2000
-
 FNPTR FwCioWriteF (
     IN byte : UWORD,
 )
@@ -23,4 +19,84 @@ EXTERN FN FwCioPutCharacter (
 
 EXTERN FN FwCioGetCharacter () : UWORD
 
+EXTERN FN FwIdle (
+    IN count : UWORD,
+)
+
+EXTERN FN FwxGetProcessorId () : UWORD
+
+FNPTR FwIpiF (
+    IN context : ^VOID,
+)
+
+EXTERN FN FwSendIpi (
+    IN targetid : ULONG,
+    IN function : FwIpiF,
+    IN context : ^VOID
+) : UBYTE
+
+#DEFINE FW_PROCESSOR_MAX 8
+
+STRUCT FwIpiPacket
+    Function : FwIpiF,
+    Context : ^VOID,
+    Acknowledged : ULONG,
+END
+
+STRUCT FwExceptionRecord
+    t0 : ULONG,
+    t1 : ULONG,
+    t2 : ULONG,
+    t3 : ULONG,
+    t4 : ULONG,
+    t5 : ULONG,
+    a0 : ULONG,
+    a1 : ULONG,
+    a2 : ULONG,
+    a3 : ULONG,
+    s0 : ULONG,
+    s1 : ULONG,
+    s2 : ULONG,
+    s3 : ULONG,
+    s4 : ULONG,
+    s5 : ULONG,
+    s6 : ULONG,
+    s7 : ULONG,
+    s8 : ULONG,
+    s9 : ULONG,
+    s10 : ULONG,
+    s11 : ULONG,
+    s12 : ULONG,
+    s13 : ULONG,
+    s14 : ULONG,
+    s15 : ULONG,
+    s16 : ULONG,
+    s17 : ULONG,
+    Lr : ULONG,
+END
+
 EXTERN FwDeviceDatabase : FwDeviceDatabaseRecord
+
+#DEFINE IO_LSIC_BASE 0xF8030000
+#DEFINE IO_LSIC_GAP 32
+
+STRUCT PACKED IoLsic
+    Mask0 : ULONG,
+    Mask1 : ULONG,
+    Pending0 : ULONG,
+    Pending1 : ULONG,
+    ClaimComplete : ULONG,
+    Ipl : ULONG,
+    Reserved0 : ULONG,
+    Reserved1 : ULONG,
+END
+
+STRUCT PACKED IoLsicTable
+    Table : IoLsic[8],
+END
+
+#DEFINE IO_RTC_CMD 0xF8000080
+#DEFINE IO_RTC_DATA 0xF8000084
+
+#DEFINE IO_SERIAL_CMD 0xF8000040
+#DEFINE IO_SERIAL_DATA 0xF8000044

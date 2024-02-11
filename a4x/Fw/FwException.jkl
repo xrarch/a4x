@@ -2,12 +2,115 @@
 // Contains the exception handler for the firmware.
 //
 
+#INCLUDE "<inc>/Rtl.hjk"
 #INCLUDE "<inc>/a4x.hjk"
 
 #ASM [
 
 FwxExceptionVector:
 .global FwxExceptionVector
-    j    FwxExceptionVector
+    subi sp, sp, FwExceptionRecord__SIZEOF
+
+    mov  long [sp + FwExceptionRecord_t0], t0
+    mov  long [sp + FwExceptionRecord_t1], t1
+    mov  long [sp + FwExceptionRecord_t2], t2
+    mov  long [sp + FwExceptionRecord_t3], t3
+    mov  long [sp + FwExceptionRecord_t4], t4
+    mov  long [sp + FwExceptionRecord_t5], t5
+    mov  long [sp + FwExceptionRecord_a0], a0
+    mov  long [sp + FwExceptionRecord_a1], a1
+    mov  long [sp + FwExceptionRecord_a2], a2
+    mov  long [sp + FwExceptionRecord_a3], a3
+    mov  long [sp + FwExceptionRecord_s0], s0
+    mov  long [sp + FwExceptionRecord_s1], s1
+    mov  long [sp + FwExceptionRecord_s2], s2
+    mov  long [sp + FwExceptionRecord_s3], s3
+    mov  long [sp + FwExceptionRecord_s4], s4
+    mov  long [sp + FwExceptionRecord_s5], s5
+    mov  long [sp + FwExceptionRecord_s6], s6
+    mov  long [sp + FwExceptionRecord_s7], s7
+    mov  long [sp + FwExceptionRecord_s8], s8
+    mov  long [sp + FwExceptionRecord_s9], s9
+    mov  long [sp + FwExceptionRecord_s10], s10
+    mov  long [sp + FwExceptionRecord_s11], s11
+    mov  long [sp + FwExceptionRecord_s12], s12
+    mov  long [sp + FwExceptionRecord_s13], s13
+    mov  long [sp + FwExceptionRecord_s14], s14
+    mov  long [sp + FwExceptionRecord_s15], s15
+    mov  long [sp + FwExceptionRecord_s16], s16
+    mov  long [sp + FwExceptionRecord_s17], s17
+    mov  long [sp + FwExceptionRecord_Lr], lr
+
+    mfcr a3, epc
+    mfcr a2, whami
+    mfcr a1, rs
+    mov  a0, sp
+    jal  FwExceptionVector
+
+    mov  t0, long [sp + FwExceptionRecord_t0]
+    mov  t1, long [sp + FwExceptionRecord_t1]
+    mov  t2, long [sp + FwExceptionRecord_t2]
+    mov  t3, long [sp + FwExceptionRecord_t3]
+    mov  t4, long [sp + FwExceptionRecord_t4]
+    mov  t5, long [sp + FwExceptionRecord_t5]
+    mov  a0, long [sp + FwExceptionRecord_a0]
+    mov  a1, long [sp + FwExceptionRecord_a1]
+    mov  a2, long [sp + FwExceptionRecord_a2]
+    mov  a3, long [sp + FwExceptionRecord_a3]
+    mov  s0, long [sp + FwExceptionRecord_s0]
+    mov  s1, long [sp + FwExceptionRecord_s1]
+    mov  s2, long [sp + FwExceptionRecord_s2]
+    mov  s3, long [sp + FwExceptionRecord_s3]
+    mov  s4, long [sp + FwExceptionRecord_s4]
+    mov  s5, long [sp + FwExceptionRecord_s5]
+    mov  s6, long [sp + FwExceptionRecord_s6]
+    mov  s7, long [sp + FwExceptionRecord_s7]
+    mov  s8, long [sp + FwExceptionRecord_s8]
+    mov  s9, long [sp + FwExceptionRecord_s9]
+    mov  s10, long [sp + FwExceptionRecord_s10]
+    mov  s11, long [sp + FwExceptionRecord_s11]
+    mov  s12, long [sp + FwExceptionRecord_s12]
+    mov  s13, long [sp + FwExceptionRecord_s13]
+    mov  s14, long [sp + FwExceptionRecord_s14]
+    mov  s15, long [sp + FwExceptionRecord_s15]
+    mov  s16, long [sp + FwExceptionRecord_s16]
+    mov  s17, long [sp + FwExceptionRecord_s17]
+    mov  lr, long [sp + FwExceptionRecord_Lr]
+
+    addi sp, sp, FwExceptionRecord__SIZEOF
+    rfe
 
 ]
+
+#DEFINE XR17032_RS_ECAUSE_SHIFT 28
+#DEFINE XR17032_RS_ECAUSE_MASK 0xF
+
+#DEFINE XR17032_EXC_INT 1
+
+EXTERN FN FwServiceIpi (
+    IN procid : ULONG,
+)
+
+FN FwExceptionVector (
+    IN trapframe : ^FwExceptionRecord,
+    IN rs : ULONG,
+    IN procid : ULONG,
+    IN badaddr : ULONG,
+)
+
+    ecause := (rs >> XR17032_RS_ECAUSE_SHIFT) & XR17032_RS_ECAUSE_MASK
+
+    IF ecause == XR17032_EXC_INT THEN
+        // It must have been an IPI, since we disable all other interrupts.
+
+        FwServiceIpi ( procid )
+
+    ELSE
+        // Something bad happened.
+
+        RtlPrint ( "exc=%d proc=%d tf=%p ba=%p\n",
+            ecause, procid, trapframe, badaddr )
+
+        WHILE TRUE DO END
+    END
+END

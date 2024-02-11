@@ -5,6 +5,7 @@
 .section text
 
 .extern FwxExceptionVector
+.extern FwProcessorStartup
 .extern FwReset
 
 ;vector 0 - nothing
@@ -72,12 +73,19 @@
 
 .align 256
 
+; We should now be at 0xFFFE1000, the reset vector.
+
 FwxReset:
     ; Invalidate the caches.
 
     li   t0, 3
     mtcr icachectrl, t0
     mtcr dcachectrl, t0
+
+    ; Set our exception block.
+
+    lui  t0, zero, 0xFFFE0000
+    mtcr eb, t0
 
     ; If we aren't processor zero, go to the MP corrall and wait for an IPI.
 
@@ -89,20 +97,32 @@ FwxReset:
     la   t0, 0xAABBCCDD
     mov  long [0xF8800000], t0, tmp=t1
 
-    ; Set the initial stack pointer.
+    ; Set the initial stack pointer to 4096 bytes.
 
-    li   sp, 0x2000
-
-    ; Set the exception block.
-
-    lui  t0, zero, 0xFFFE0000
-    mtcr eb, t0
+    li   sp, 0x1000
 
     j    FwReset
 
 .mp_corrall:
-    hlt
-    b    .mp_corrall
+    ; Set the stack pointer to 0x1000 + (512 * id).
+
+    li   sp, 0x1000
+    add  sp, sp, t0 LSH 9
+
+    mov  a0, t0
+    j    FwProcessorStartup
+
+FwxEnableInterrupts:
+.global FwxEnableInterrupts
+    mfcr t0, rs
+    ori  t0, t0, 2
+    mtcr rs, t0
+    ret
+
+FwxGetProcessorId:
+.global FwxGetProcessorId
+    mfcr a3, whami
+    ret
 
 .ds "XR/17032 BootROM, by Will"
 
