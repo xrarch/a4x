@@ -1,0 +1,190 @@
+//
+// Implements the barebones DKS disk controller driver.
+//
+
+#INCLUDE "<inc>/a4x.hjk"
+
+#DEFINE IO_DKS_BASE 0xF8000064
+
+#DEFINE IO_DKS_SELECT 1
+#DEFINE IO_DKS_READ 2
+#DEFINE IO_DKS_WRITE 3
+#DEFINE IO_DKS_INFO 4
+#DEFINE IO_DKS_POLL 5
+#DEFINE IO_DKS_ENA 6
+#DEFINE IO_DKS_DIS 7
+#DEFINE IO_DKS_TRC 8
+#DEFINE IO_DKS_TRA 9
+
+STRUCT IoDks
+    Cmd : ULONG,
+    Data0 : ULONG,
+    Data1 : ULONG,
+END
+
+#DEFINE IO_DKS_MAX 8
+
+FN FwProbeDks ()
+
+    // Probe the disks to build the device database.
+
+    RtlPrint ( "Probing disks:\n" )
+
+    RtlPrint ( "%8d %8d %8d %8d %8d %8d %8d %8d\n",
+        0, 1, 2, 3, 4, 5, 6, 7 )
+
+    dks := CAST IO_DKS_BASE TO ^IoDks
+
+    WHILE dks^.Cmd DO
+        BARRIER
+    END
+
+    i := 0
+
+    WHILE i < IO_DKS_MAX DO
+        dks^.Data0 = i
+        BARRIER
+
+        dks^.Cmd = IO_DKS_POLL
+        BARRIER
+
+        WHILE dks^.Cmd DO
+            BARRIER
+        END
+
+        PROBE present := dks^.Data0
+        PROBE sectors := dks^.Data1
+
+        IF present & 1 THEN
+            RtlPrint ( "%6dKB ", (sectors * 512) / 1024 )
+
+            // Set up virtual partition 8 to be the entire disk.
+
+            p8 := &FwDeviceDatabase.Dks[i].Partitions[8]
+
+            p8^.BaseSector = 0
+            p8^.SectorCount = sectors
+            p8^.Id = i
+
+        ELSE
+            RtlPrint ( "%8s ", "ABSENT" )
+        END
+
+        i += 1
+    END
+
+    RtlPrint ( "\n" )
+
+    // Now read partition information for each disk.
+
+    i = 0
+
+    WHILE i < IO_DKS_MAX DO
+        disk := &FwDeviceDatabase.Dks[i]
+
+        IF disk^.Partitions[8].SectorCount THEN
+            FwInitializeDiskPartitions (
+                disk, // disk
+                &disk^.Partitions[8], // partition
+            )
+        END
+
+        i += 1
+    END
+END
+
+FN FwReadDisk (
+    IN partition : ^FwDiskPartitionInfo,
+    IN buffer : ^VOID,
+    IN sector : ULONG,
+    IN count : ULONG,
+) : UWORD
+
+    // Read the specified number of sectors from the partition.
+    // Returns TRUE on success, FALSE otherwise.
+
+    IF sector + count < sector THEN
+        // Overflow.
+
+        RETURN FALSE
+    END
+
+    IF sector + count >= partition^.SectorCount THEN
+        // Beyond end of partition.
+
+        RETURN FALSE
+    END
+
+    IF buffer & 511 THEN
+        // Unaligned buffer.
+
+        RETURN FALSE
+    END
+
+    sector += partition^.BaseSector
+    id := partition^.Id
+
+    dks := CAST IO_DKS_BASE TO ^IoDks
+
+    WHILE dks^.Cmd DO
+        BARRIER
+    END
+
+    // Select the disk ID.
+
+    dks^.Data0 = id
+    BARRIER
+
+    dks^.Cmd = IO_DKS_SELECT
+    BARRIER
+
+    WHILE dks^.Cmd DO
+        BARRIER
+    END
+
+    // Set the transfer count to 1 sector.
+
+    dks^.Data0 = 1
+    BARRIER
+
+    dks^.Cmd = IO_DKS_TRC
+    BARRIER
+
+    WHILE dks^.Cmd DO
+        BARRIER
+    END
+
+    WHILE count DO
+        // Set the transfer address.
+
+        dks^.Data0 = CAST buffer TO ULONG
+        BARRIER
+
+        dks^.Cmd = IO_DKS_TRA
+        BARRIER
+
+        WHILE dks^.Cmd DO
+            BARRIER
+        END
+
+        // Perform the read.
+
+        dks^.Data0 = sector
+        BARRIER
+
+        dks^.Cmd = IO_DKS_READ
+        BARRIER
+
+        WHILE dks^.Cmd DO
+            BARRIER
+        END
+
+        sector += 1
+        count -= 1
+        buffer += 512
+    END
+
+    // DMA was performed so sweep the Dcache.
+
+    FwxSweepDcache ()
+END

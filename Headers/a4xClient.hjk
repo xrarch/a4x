@@ -7,18 +7,33 @@ STRUCT FwRamRecord
     PageFrameCount : ULONG,
 END
 
+STRUCT FwDiskBootInfo
+    OsName : UBYTE[16],
+    BootstrapSector : ULONG,
+    BootstrapCount : ULONG,
+    Badge : UBYTE[512],
+END
+
 STRUCT FwDiskPartitionInfo
+    Label : UBYTE[8],
     BaseSector : ULONG,
     SectorCount : ULONG,
+    BootInfo : ^FwDiskBootInfo,
+    Id : UBYTE,
 END
 
 STRUCT FwDksInfoRecord
-    Partitions : FwDiskPartitionInfo[8],
-    SectorCount : ULONG,
+    Label : UBYTE[8],
+    Partitions : FwDiskPartitionInfo[9],
 END
 
 STRUCT FwAmtsuInfoRecord
     Mid : ULONG,
+END
+
+STRUCT FwBoardInfoRecord
+    Name : UBYTE[16],
+    BoardId : ULONG,
 END
 
 STRUCT FwFramebufferInfoRecord
@@ -32,10 +47,24 @@ STRUCT FwProcessorInfoRecord
     Present : UBYTE,
 END
 
+ENUM FwMachineType : UBYTE
+    XR_STATION,
+    XR_MP,
+    XR_FRAME,
+END
+
 STRUCT FwDeviceDatabaseRecord
+    TotalRamBytes : ULONG,
+    ProcessorCount : ULONG,
     Ram : FwRamRecord[8],
     Dks : FwDksInfoRecord[8],
     Amtsu : FwAmtsuInfoRecord[16],
-    Processor : FwProcessorInfoRecord[8],
+    Boards : FwBoardInfoRecord[7],
+    Processors : FwProcessorInfoRecord[8],
     Framebuffer : FwFramebufferInfoRecord,
+    MachineType : FwMachineType,
+END
+
+STRUCT FwInformationRecord
+    DeviceDatabase : ^FwDeviceDatabaseRecord,
 END

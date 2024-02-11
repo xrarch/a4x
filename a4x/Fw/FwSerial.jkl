@@ -2,7 +2,6 @@
 // Implements the barebones serial character I/O driver.
 //
 
-#INCLUDE "<inc>/Rtl.hjk"
 #INCLUDE "<inc>/a4x.hjk"
 
 FN (FwCioWriteF) FwSerialWrite (
@@ -19,6 +18,8 @@ FN (FwCioWriteF) FwSerialWrite (
     END
 
     dataport^ = byte
+
+    BARRIER
 END
 
 FN (FwCioReadF) FwSerialRead () : UWORD

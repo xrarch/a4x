@@ -3,8 +3,8 @@
 //
 
 #INCLUDE "<inc>/a4x.hjk"
-#INCLUDE "<inc>/Rtl.hjk"
 
+EXTERN FN FwInitializeBump ()
 EXTERN FN FwCioEarlyInitialize ()
 EXTERN FN FwProbeDevices ()
 
@@ -12,16 +12,15 @@ EXTERN FN FwInitializeInterrupts (
     IN procid : ULONG,
 )
 
-FN (FwIpiF) FwTestIpiFunction (
-    IN context : ^VOID,
-)
-
-    RtlPrint ( "Hello from %x! Context is %d\n", FwxGetProcessorId (), context )
-END
+PUBLIC FwInitializing : UBYTE
 
 FN FwMain ()
     
     // Main routine for the firmware.
+
+    FwInitializing = TRUE
+
+    FwInitializeBump ()
 
     FwInitializeInterrupts ( 0 )
 
@@ -31,41 +30,23 @@ FN FwMain ()
 
     // Now we can say hello.
 
-    RtlPrint ( "\n    XR/STATION a4x Firmware (c) 2024\n" )
+    RtlPrint ( "\n    XR/computer Reset Asserted\n\n" )
 
     // Now probe the devices to fill in the device database.
 
     FwProbeDevices ()
 
-    FwIdle ( 200000 )
+    // Set FwInitializing to false. Allocations are forbidden now.
 
-    RtlPrint ( "Sending IPI to processor 2\n" )
+    FwInitializing = FALSE
 
-    FwSendIpi (
-        2, // targetid
-        &FwTestIpiFunction, // function
-        CAST 10 TO ^VOID, // context
-    )
+    // If there's a framebuffer, initialize the UI facade now.
 
-    FwSendIpi (
-        2, // targetid
-        &FwTestIpiFunction, // function
-        CAST 10 TO ^VOID, // context
-    )
+    // Decide whether to auto-boot or enter the command monitor.
 
-    FwSendIpi (
-        2, // targetid
-        &FwTestIpiFunction, // function
-        CAST 10 TO ^VOID, // context
-    )
-
-    FwSendIpi (
-        2, // targetid
-        &FwTestIpiFunction, // function
-        CAST 10 TO ^VOID, // context
-    )
-
-    RtlPrint ( "Done\n" )
+    WHILE TRUE DO
+        FwxHalt ()
+    END
 END
 
 FN FwProcessorStartup (
@@ -80,9 +61,30 @@ FN FwProcessorStartup (
 
     FwInitializeInterrupts ( procid )
 
-    // Indicate our presence in the device database.
+    // Here we will wait for IPIs forever.
 
-    FwDeviceDatabase.Processor[procid].Present = TRUE
+    WHILE TRUE DO
+        FwxHalt ()
+    END
+END
 
-    WHILE TRUE DO END
+FN FwCrash (
+    IN fmt : ^UBYTE,
+    ... argv argc
+)
+
+    RtlPrint ( "\nFirmware Fatal Error: " )
+
+    RtlPrintByVarTable (
+        NULLPTR, // handle
+        fmt, // fmt
+        argv, // argv
+        argc, // argc
+    )
+
+    RtlPrint ( "\n" )
+
+    WHILE TRUE DO
+        FwxHalt ()
+    END
 END

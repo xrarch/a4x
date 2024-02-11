@@ -3,17 +3,172 @@
 //
 
 #INCLUDE "<inc>/a4x.hjk"
-#INCLUDE "<inc>/Rtl.hjk"
 
 PUBLIC FwDeviceDatabase : FwDeviceDatabaseRecord
+
+FwProbeCheck : ULONG
+
+FN (FwBusErrorF) FwProbeBusError ()
+    FwProbeCheck = 0
+END
+
+FN FwProbeProcessors ()
+
+    // We probe processors by trying to read their LSIC IPL register. If there
+    // is a bus error, there is no processor there.
+
+    FwBusErrorCallback = &FwProbeBusError
+
+    i := 0
+
+    WHILE i < XR_PROCESSOR_MAX DO
+        lsic := &(CAST IO_LSIC_BASE TO ^IoLsicTable)^.Table[i]
+
+        FwProbeCheck = 1
+
+        // PROBE keyword stops this load from being optimized out.
+
+        PROBE dumpster := lsic^.Ipl
+
+        IF FwProbeCheck THEN
+            // There is a processor here.
+
+            FwDeviceDatabase.ProcessorCount += 1
+
+            FwDeviceDatabase.Processors[i].Present = TRUE
+        END
+
+        i += 1
+    END
+
+    FwBusErrorCallback = NULLPTR
+
+    RtlPrint ( "%d XR/17032 Processor", FwDeviceDatabase.ProcessorCount )
+
+    IF FwDeviceDatabase.ProcessorCount > 1 THEN
+        RtlPrint ( "s" )
+    END
+
+    RtlPrint ( "\n" )
+
+    IF FwDeviceDatabase.ProcessorCount == 1 THEN
+        // Must be an XR/station.
+
+        FwDeviceDatabase.MachineType = XR_STATION
+
+    ELSEIF FwDeviceDatabase.ProcessorCount <= 4 THEN
+        // 2-4 processors is an XR/MP.
+
+        FwDeviceDatabase.MachineType = XR_MP
+
+    ELSE
+        // >4 processors is an XR/frame.
+
+        FwDeviceDatabase.MachineType = XR_FRAME
+    END
+END
+
+FN FwProbeRamSlot (
+    IN base : ^UBYTE,
+    IN max : ^UBYTE,
+) : UWORD
+
+    // Size the RAM slot by writing junk one page frame at a time until there's
+    // a bus error.
+
+    size := 0
+
+    // We start probing at the end of the page frame so that we make sure we
+    // only see complete page frames.
+
+    FwBusErrorCallback = &FwProbeBusError
+
+    FwProbeCheck = 1
+
+    base += 0xFFF
+
+    WHILE base < max DO
+        base^ = 0xA5
+
+        IF NOT FwProbeCheck THEN
+            BREAK
+        END
+
+        IF base^ != 0xA5 THEN
+            // There was no bus error but that was erroneous.
+            // Something weird is up! Don't include this page frame.
+
+            BREAK
+        END
+
+        size += 4096
+        base += 4096
+    END
+
+    FwBusErrorCallback = NULLPTR
+
+    RETURN size
+END
+
+FN FwProbeRam ()
+
+    // Size each RAM slot in sequence.
+
+    RtlPrint ( "Sizing memory:\n" )
+
+    RtlPrint ( "%8d %8d %8d %8d %8d %8d %8d %8d\n",
+        0, 1, 2, 3, 4, 5, 6, 7 )
+
+    i := 0
+    base := NULLPTR
+    max := base + 32 * 1024 * 1024
+
+    WHILE i < 8 DO
+        probebase := base
+
+        IF i == 0 THEN
+            // Skip the low 32KB.
+
+            probebase += 32 * 1024
+        END
+
+        size := FwProbeRamSlot (
+            probebase, // base
+            max, // max
+        )
+
+        IF i == 0 THEN
+            size += 32 * 1024
+        END
+
+        FwDeviceDatabase.Ram[i].PageFrameCount = size/4096
+        FwDeviceDatabase.TotalRamBytes += size
+
+        RtlPrint ( "%6dKB ", size/1024 )
+
+        max += (32 * 1024 * 1024)
+        base += (32 * 1024 * 1024)
+        i += 1
+    END
+
+    RtlPrint ( "\n" )
+
+    RtlPrint ( "Total memory: %dKB\n", FwDeviceDatabase.TotalRamBytes / 1024 )
+END
+
+EXTERN FN FwProbeDks ()
 
 FN FwProbeDevices ()
 
     // Fill in the device database by probing all of the devices.
 
-    // FwProbeRam ()
+    RtlPrint ( "Probing system devices...\n" )
 
-    // FwProbeDks ()
+    FwProbeProcessors ()
+
+    FwProbeRam ()
+
+    FwProbeDks ()
 
     // FwProbeAmtsu ()
 

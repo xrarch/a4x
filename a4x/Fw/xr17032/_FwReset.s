@@ -76,6 +76,10 @@
 ; We should now be at 0xFFFE1000, the reset vector.
 
 FwxReset:
+    ; Zero out RS.
+
+    mtcr rs, zero
+
     ; Invalidate the caches.
 
     li   t0, 3
@@ -122,6 +126,27 @@ FwxEnableInterrupts:
 FwxGetProcessorId:
 .global FwxGetProcessorId
     mfcr a3, whami
+    ret
+
+FwxHalt:
+.global FwxHalt
+    hlt
+    ret
+
+FwxFlushWriteBuffer:
+.global FwxFlushWriteBuffer
+    wmb
+    ret
+
+FwxMemoryBarrier:
+.global FwxMemoryBarrier
+    mb
+    ret
+
+FwxSweepDcache:
+.global FwxSweepDcache
+    li   t0, 3
+    mtcr dcachectrl, t0
     ret
 
 .ds "XR/17032 BootROM, by Will"

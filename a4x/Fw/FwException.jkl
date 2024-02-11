@@ -2,7 +2,6 @@
 // Contains the exception handler for the firmware.
 //
 
-#INCLUDE "<inc>/Rtl.hjk"
 #INCLUDE "<inc>/a4x.hjk"
 
 #ASM [
@@ -41,11 +40,17 @@ FwxExceptionVector:
     mov  long [sp + FwExceptionRecord_s17], s17
     mov  long [sp + FwExceptionRecord_Lr], lr
 
-    mfcr a3, epc
+    mfcr t0, epc
+    mov  long [sp + FwExceptionRecord_Epc], t0
+
+    mfcr a3, ebadaddr
     mfcr a2, whami
     mfcr a1, rs
     mov  a0, sp
     jal  FwExceptionVector
+
+    mov  t0, long [sp + FwExceptionRecord_Epc]
+    mtcr epc, t0
 
     mov  t0, long [sp + FwExceptionRecord_t0]
     mov  t1, long [sp + FwExceptionRecord_t1]
@@ -82,10 +87,13 @@ FwxExceptionVector:
 
 ]
 
+PUBLIC FwBusErrorCallback : FwBusErrorF
+
 #DEFINE XR17032_RS_ECAUSE_SHIFT 28
 #DEFINE XR17032_RS_ECAUSE_MASK 0xF
 
 #DEFINE XR17032_EXC_INT 1
+#DEFINE XR17032_EXC_BUS 4
 
 EXTERN FN FwServiceIpi (
     IN procid : ULONG,
@@ -104,6 +112,16 @@ FN FwExceptionVector (
         // It must have been an IPI, since we disable all other interrupts.
 
         FwServiceIpi ( procid )
+
+    ELSEIF ecause == XR17032_EXC_BUS AND procid == 0 AND FwBusErrorCallback THEN
+        // This was a bus error, this is the boot processor, and a callback
+        // was registered. This must be a normal bus error during probing.
+
+        FwBusErrorCallback ()
+
+        // Increment EPC by 4 to skip the instruction that caused the bus error.
+
+        trapframe^.Epc += 4
 
     ELSE
         // Something bad happened.

@@ -1,6 +1,9 @@
+#INCLUDE "<inc>/Rtl.hjk"
 #INCLUDE "<inc>/a4xClient.hjk"
 
 #DEFINE XR_ROM_START 0xFFFE0000
+
+#DEFINE A4X_SECTOR_BUFFER 0x2000
 
 FNPTR FwCioWriteF (
     IN byte : UWORD,
@@ -17,13 +20,48 @@ EXTERN FN FwCioPutCharacter (
     IN byte : UWORD,
 )
 
+EXTERN FN FwBumpAllocate (
+    IN bytes : UWORD,
+) : ^VOID
+
 EXTERN FN FwCioGetCharacter () : UWORD
+
+EXTERN FN FwReadDisk (
+    IN partition : ^FwDiskPartitionInfo,
+    IN buffer : ^VOID,
+    IN sector : ULONG,
+    IN count : ULONG,
+) : UWORD
+
+EXTERN FN FwInitializeDiskPartitions (
+    IN disk : ^FwDksInfoRecord,
+    IN partition : ^FwDiskPartitionInfo,
+)
 
 EXTERN FN FwIdle (
     IN count : UWORD,
 )
 
+EXTERN FN FwxSweepDcache ()
+
+EXTERN FN FwxHalt ()
+
 EXTERN FN FwxGetProcessorId () : UWORD
+
+EXTERN FN FwxFlushWriteBuffer ()
+
+EXTERN FN FwxMemoryBarrier ()
+
+EXTERN FN FwCrash (
+    IN fmt : ^UBYTE,
+    ... argv argc
+)
+
+FNPTR FwBusErrorF ()
+
+EXTERN FwBusErrorCallback : FwBusErrorF
+
+EXTERN FwInitializing : UBYTE
 
 FNPTR FwIpiF (
     IN context : ^VOID,
@@ -35,7 +73,7 @@ EXTERN FN FwSendIpi (
     IN context : ^VOID
 ) : UBYTE
 
-#DEFINE FW_PROCESSOR_MAX 8
+#DEFINE XR_PROCESSOR_MAX 8
 
 STRUCT FwIpiPacket
     Function : FwIpiF,
@@ -73,6 +111,7 @@ STRUCT FwExceptionRecord
     s16 : ULONG,
     s17 : ULONG,
     Lr : ULONG,
+    Epc : ULONG,
 END
 
 EXTERN FwDeviceDatabase : FwDeviceDatabaseRecord
@@ -100,3 +139,28 @@ END
 
 #DEFINE IO_SERIAL_CMD 0xF8000040
 #DEFINE IO_SERIAL_DATA 0xF8000044
+
+#DEFINE IO_APT_MAGIC 0x4E4D494D
+
+STRUCT PACKED IoAptEntry
+    Label : UBYTE[8],
+    SectorCount : ULONG,
+    Status : ULONG,
+END
+
+STRUCT PACKED IoAptBootBlock
+    BootCode : UBYTE[15],
+    FfIfVariant : UBYTE,
+    Partitions : IoAptEntry[8],
+    Magic : ULONG,
+    Label : UBYTE[16],
+END
+
+#DEFINE IO_APT_OS_RECORD_MAGIC 0x45544E41
+
+STRUCT PACKED IoAptOsRecord
+    Magic : ULONG,
+    OsName : UBYTE[16],
+    BootstrapSector : ULONG,
+    BootstrapCount : ULONG,
+END

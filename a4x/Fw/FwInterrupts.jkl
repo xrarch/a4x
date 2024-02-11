@@ -3,7 +3,6 @@
 //
 
 #INCLUDE "<inc>/a4x.hjk"
-#INCLUDE "<inc>/Rtl.hjk"
 
 EXTERN FN FwxEnableInterrupts ()
 
@@ -16,17 +15,9 @@ FN FwInitializeInterrupts (
     mylsic := &(CAST IO_LSIC_BASE TO ^IoLsicTable)^.Table[procid]
 
     mylsic^.Mask0 = 0x00000001
-    BARRIER
-    
     mylsic^.Mask1 = 0x00000000
-    BARRIER
-
     mylsic^.Pending0 = 0
-    BARRIER
-
     mylsic^.Pending1 = 0
-    BARRIER
-
     mylsic^.Ipl = 63
     BARRIER
 
@@ -35,7 +26,7 @@ FN FwInitializeInterrupts (
     FwxEnableInterrupts ()
 END
 
-FwPendingPackets : ^FwIpiPacket[FW_PROCESSOR_MAX]
+FwPendingPackets : ^FwIpiPacket[XR_PROCESSOR_MAX]
 
 FN FwSendIpi (
     IN targetid : ULONG,
@@ -53,6 +44,7 @@ FN FwSendIpi (
     packet.Context = context
 
     FwPendingPackets[targetid] = &packet
+    BARRIER
 
     // Write the IPI interrupt into the LSIC interrupt pending register for the
     // target processor.
@@ -60,6 +52,7 @@ FN FwSendIpi (
     lsic := &(CAST IO_LSIC_BASE TO ^IoLsicTable)^.Table[targetid]
 
     lsic^.Pending0 = 0x00000002
+    BARRIER
 
     // Wait for packet.
 
@@ -90,13 +83,16 @@ FN FwServiceIpi (
     // Performs the function specified in the packet and signals it as
     // acknowledged.
 
-    packet := FwPendingPackets[procid]
-
-    packet^.Function ( packet^.Context )
+    // Complete the interrupt BEFORE acknowledging the packet.
 
     lsic := &(CAST IO_LSIC_BASE TO ^IoLsicTable)^.Table[procid]
 
     lsic^.ClaimComplete = 1
+    BARRIER
+
+    packet := FwPendingPackets[procid]
+
+    packet^.Function ( packet^.Context )
 
     packet^.Acknowledged = TRUE
 END

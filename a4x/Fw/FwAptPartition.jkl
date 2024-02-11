@@ -1,0 +1,179 @@
+//
+// Contains support for APT (A3X Partition Table).
+//
+
+#INCLUDE "<inc>/a4x.hjk"
+
+FN FwCheckBootable (
+    IN partition : ^FwDiskPartitionInfo,
+    IN partitionid : ULONG,
+)
+
+    // Check if the partition is bootable.
+    // If it is, indicate that in the device database and load the splash
+    // bitmap.
+
+    osrecord := CAST A4X_SECTOR_BUFFER TO ^IoAptOsRecord
+
+    IF NOT FwReadDisk (
+        partition, // partition
+        osrecord, // buffer
+        1, // sector
+        1, // count
+    ) THEN
+        RtlPrint ( "dks%ds%d: Failed to read OS record\n",
+            partition^.Id, partitionid )
+
+        LEAVE
+    END
+
+    IF osrecord^.Magic != IO_APT_OS_RECORD_MAGIC THEN
+        LEAVE
+    END
+
+    // Cool, it's bootable. Allocate a boot info record.
+
+    bootinfo := CAST FwBumpAllocate (
+        SIZEOF FwDiskBootInfo, // bytes
+    ) TO ^FwDiskBootInfo
+
+    // Copy stuff into it.
+
+    RtlCopyString (
+        &bootinfo^.OsName[0], // dest
+        &osrecord^.OsName[0], // src
+        16, // bufsize
+    )
+
+    bootinfo^.BootstrapSector = osrecord^.BootstrapSector
+    bootinfo^.BootstrapCount = osrecord^.BootstrapCount
+
+    partition^.BootInfo = bootinfo
+
+    // Load the badge. This overwrites the sector buffer.
+
+    badge := CAST A4X_SECTOR_BUFFER TO ^UBYTE
+
+    IF NOT FwReadDisk (
+        partition, // partition
+        badge, // buffer
+        2, // sector
+        1, // count
+    ) THEN
+        RtlPrint ( "dks%ds%d: Failed to read OS badge\n",
+            partition^.Id, partitionid )
+
+        LEAVE
+    END
+
+    // Copy the badge into the boot info record.
+
+    RtlCopyBytes (
+        &bootinfo^.Badge[0], // dest
+        badge, // src
+        512, // size
+    )
+
+    RtlPrint ( "'%s' located @ dks%ds%d\n",
+        &bootinfo^.OsName[0], partition^.Id, partitionid)
+END
+
+FN FwValidatePartitionTable (
+    IN bootblock : ^IoAptBootBlock,
+) : UWORD
+
+    IF bootblock^.Magic != IO_APT_MAGIC THEN
+        RETURN FALSE
+    END
+
+    IF bootblock^.FfIfVariant != 0xFF THEN
+        RETURN FALSE
+    END
+
+    RETURN TRUE
+END
+
+FN FwInitializeDiskPartitions (
+    IN disk : ^FwDksInfoRecord,
+    IN partition : ^FwDiskPartitionInfo,
+)
+
+    // Read the partition table from this disk.
+    // If there's a valid partition table, then initialize the in-memory table
+    // from it. For each partition, check if it's bootable.
+
+    bootblock := CAST A4X_SECTOR_BUFFER TO ^IoAptBootBlock
+
+    IF NOT FwReadDisk (
+        partition, // partition
+        bootblock, // buffer
+        0, // sector
+        1, // count
+    ) THEN
+        RtlPrint ( "dks%d: Failed to read partition table\n", partition^.Id )
+
+        LEAVE
+    END
+
+    IF NOT FwValidatePartitionTable ( bootblock ) THEN
+        RtlPrint ( "dks%d: No partition table\n", partition^.Id )
+
+        LEAVE
+    END
+
+    // Copy the disk label.
+
+    RtlCopyString (
+        &disk^.Label[0], // dest
+        &bootblock^.Label[0], // src
+        16, // bufsize
+    )
+
+    // Fill in the partition info.
+
+    i := 0
+    base := 4
+
+    WHILE i < 8 DO
+        partinfo := &disk^.Partitions[i]
+        blockpart := &bootblock^.Partitions[i]
+
+        IF blockpart^.Status THEN
+            // Copy the info into the device database.
+
+            RtlCopyString (
+                &partinfo^.Label[0], // dest
+                &blockpart^.Label[0], // src
+                8, // bufsize
+            )
+
+            partinfo^.BaseSector = base
+            partinfo^.SectorCount = blockpart^.SectorCount
+            partinfo^.Id = partition^.Id
+
+            base += blockpart^.SectorCount
+        END
+
+        i += 1
+        blockpart += SIZEOF IoAptEntry
+    END
+
+    // Now check each partition for bootability.
+    // We couldn't do this inline with filling in the partition info because it
+    // trashes the sector buffer, which we were reading partition info from.
+
+    i = 0
+
+    WHILE i < 8 DO
+        partinfo := &disk^.Partitions[i]
+
+        IF partinfo^.SectorCount THEN
+            FwCheckBootable (
+                partinfo, // partition
+                i, // partitionid
+            )
+        END
+
+        i += 1
+    END
+END

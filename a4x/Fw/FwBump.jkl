@@ -1,0 +1,37 @@
+//
+// Contains a bump allocator for the firmware.
+//
+
+#INCLUDE "<inc>/a4x.hjk"
+
+FwBumpPtr := 0
+
+EXTERN _bss_end : UBYTE
+
+FN FwInitializeBump ()
+
+    FwBumpPtr = CAST &_bss_end TO UWORD
+
+    // Ensure word alignment.
+
+    FwBumpPtr += 3
+    FwBumpPtr &= ~3
+END
+
+FN FwBumpAllocate (
+    IN bytes : UWORD,
+) : ^VOID
+
+    IF NOT FwInitializing THEN
+        FwCrash ( "Allocation after initialization" )
+    END
+
+    bytes += 3
+    bytes &= ~3
+
+    ptr := FwBumpPtr
+
+    FwBumpPtr += bytes
+
+    RETURN CAST ptr TO ^VOID
+END

@@ -2,7 +2,6 @@
 // Contains reset for the firmware.
 //
 
-#INCLUDE "<inc>/Rtl.hjk"
 #INCLUDE "<inc>/a4x.hjk"
 
 EXTERN FN FwMain ()
@@ -39,5 +38,7 @@ FN FwReset ()
 
     FwMain ()
 
-    WHILE TRUE DO END
+    WHILE TRUE DO
+        FwxHalt ()
+    END
 END
