@@ -1,0 +1,21 @@
+//
+// Contains the firmware device database.
+//
+
+#INCLUDE "<inc>/a4x.hjk"
+#INCLUDE "<inc>/Rtl.hjk"
+
+PUBLIC FwDeviceDatabase : FwDeviceDatabaseRecord
+
+FN FwProbeDevices ()
+
+    // Fill in the device database by probing all of the devices.
+
+    // FwProbeRam ()
+
+    // FwProbeDks ()
+
+    // FwProbeAmtsu ()
+
+    // FwProbeFramebuffer ()
+END

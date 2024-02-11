@@ -1,0 +1,41 @@
+ENUM FwFramebufferType : UBYTE
+    FW_FRAMEBUFFER_ABSENT,
+    FW_FRAMEBUFFER_KINNOWFB,
+END
+
+STRUCT FwRamRecord
+    PageFrameCount : ULONG,
+END
+
+STRUCT FwDiskPartitionInfo
+    BaseSector : ULONG,
+    SectorCount : ULONG,
+END
+
+STRUCT FwDksInfoRecord
+    Partitions : FwDiskPartitionInfo[8],
+    SectorCount : ULONG,
+END
+
+STRUCT FwAmtsuInfoRecord
+    Mid : ULONG,
+END
+
+STRUCT FwFramebufferInfoRecord
+    Address : ^VOID,
+    Width : UINT,
+    Height : UINT,
+    Type : FwFramebufferType,
+END
+
+STRUCT FwProcessorInfoRecord
+    Present : UBYTE,
+END
+
+STRUCT FwDeviceDatabaseRecord
+    Ram : FwRamRecord[8],
+    Dks : FwDksInfoRecord[8],
+    Amtsu : FwAmtsuInfoRecord[16],
+    Processor : FwProcessorInfoRecord[8],
+    Framebuffer : FwFramebufferInfoRecord,
+END

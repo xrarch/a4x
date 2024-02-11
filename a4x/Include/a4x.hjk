@@ -1,3 +1,5 @@
+#INCLUDE "<inc>/a4xClient.hjk"
+
 #DEFINE XR_ROM_START 0xFFFE0000
 
 // Make sure to update the linker move expression if you change this.
@@ -20,3 +22,5 @@ EXTERN FN FwCioPutCharacter (
 )
 
 EXTERN FN FwCioGetCharacter () : UWORD
+
+EXTERN FwDeviceDatabase : FwDeviceDatabaseRecord

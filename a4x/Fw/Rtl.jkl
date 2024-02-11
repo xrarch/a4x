@@ -1,3 +1,8 @@
+//
+// Contains the Rtl routines.
+// TEMP: To be split up and moved out of the firmware codebase.
+//
+
 #INCLUDE "<inc>/Rtl.hjk"
 
 #ASM [
@@ -488,8 +493,6 @@ FN RtlpFormatInteger (
     END
 
     IF signed AND number & 0x80000000 THEN
-        callback ( '-', context )
-
         number = -number
 
         signedbias = 1
@@ -516,6 +519,10 @@ FN RtlpFormatInteger (
 
             RtlpPad ( padchar, callback, context, arg - (log10 + signedbias) )
         END
+    END
+
+    IF signedbias THEN
+        callback ( '-', context )
     END
 
     WHILE log10 DO
@@ -621,12 +628,38 @@ FN (RtlpFormatF) RtlpFormatP (
     )
 END
 
+FN (RtlpFormatF) RtlpFormatC (
+    IN callback : RtlPrintCallbackF,
+    IN context : ^VOID,
+    IN flag : UWORD,
+    IN arg : UWORD,
+    IN value : ^VOID,
+)
+
+    IF flag & RTL_PRINT_ARG THEN
+        IF NOT (flag & RTL_PRINT_ARG_NEG) AND arg > 1 THEN
+            // Align to the right.
+
+            RtlpPad ( ' ', callback, context, arg - 1 )
+        END
+    END
+
+    callback ( CAST value TO UBYTE, context )
+
+    IF flag & RTL_PRINT_ARG_NEG AND arg > 1 THEN
+        // Align to the left.
+
+        RtlpPad ( ' ', callback, context, arg - 1 )
+    END
+END
+
 RtlpFormatters : RtlpFormatF['z' - 'a' + 1] = {
     ['s' - 'a'] = &RtlpFormatS,
     ['d' - 'a'] = &RtlpFormatD,
     ['u' - 'a'] = &RtlpFormatU,
     ['x' - 'a'] = &RtlpFormatX,
     ['p' - 'a'] = &RtlpFormatP,
+    ['c' - 'a'] = &RtlpFormatC,
 }
 
 FN RtlPrintByCallbackByVarTable (
