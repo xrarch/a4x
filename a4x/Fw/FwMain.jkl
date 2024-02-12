@@ -17,13 +17,17 @@ EXTERN FN FwInitializeInterrupts (
     IN procid : ULONG,
 )
 
+#IF CHK
 PUBLIC FwInitializing : UBYTE
+#END
 
 FN FwMain ()
     
     // Main routine for the firmware.
 
+#IF CHK
     FwInitializing = TRUE
+#END
 
     // Initialize the bump allocator.
 
@@ -49,9 +53,11 @@ FN FwMain ()
 
     FwProbeDevices ()
 
+#IF CHK
     // Set FwInitializing to false. Allocations are forbidden now.
 
     FwInitializing = FALSE
+#END
 
     // Initialize the framebuffer.
 

@@ -14,10 +14,11 @@ export LNK := $(SDK)/link.sh
 export ARCHITECTURE := xr17032
 export PLATFORM := xrstation
 
-ifeq ($(DEBUGCHECKS),1)
-	JC += DBG=1
+ifeq ($(CHK),1)
+	JC += CHK=1
 	CHKFRE := chk
 else
+	JC += CHK=0
 	CHKFRE := fre
 endif
 

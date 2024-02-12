@@ -22,9 +22,11 @@ FN FwBumpAllocate (
     IN bytes : UWORD,
 ) : ^VOID
 
+#IF CHK
     IF NOT FwInitializing THEN
         FwCrash ( "Allocation after initialization" )
     END
+#END
 
     bytes += 3
     bytes &= ~3
