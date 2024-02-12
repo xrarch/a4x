@@ -48,6 +48,27 @@ EXTERN FN RtlPrint (
     ... argv argc
 )
 
+EXTERN FN RtlFormatByVarTable (
+    IN dest : ^UBYTE,
+    IN bufsize : UWORD,
+    IN fmt : ^UBYTE,
+    IN argv : ^^VOID,
+    IN argc : UWORD,
+)
+
+EXTERN FN RtlFormat (
+    IN dest : ^UBYTE,
+    IN bufsize : UWORD,
+    IN fmt : ^UBYTE,
+    ... argv argc
+)
+
+EXTERN FN RtlStringToNumber (
+    IN src : ^UBYTE,
+    IN bufsize : UWORD,
+    OUT num : UWORD,
+) : UWORD
+
 EXTERN FN RtlCompareString (
     IN str1 : ^UBYTE,
     IN str2 : ^UBYTE,

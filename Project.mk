@@ -23,6 +23,7 @@ else
 endif
 
 ifdef MKBINARY
+	cp $(FULLOUTPUTFILE) $(FULLOUTPUTFILE).XLOFF
 	$(LNK) binary -nobss $(FULLOUTPUTFILE)
 else
 	$(LNK) istrip $(FULLOUTPUTFILE)

@@ -42,6 +42,39 @@ EXTERN FN FwIdle (
     IN count : UWORD,
 )
 
+EXTERN FN FwSetNvramVariable (
+    IN name : ^UBYTE,
+    IN contents : ^UBYTE,
+) : UWORD
+
+EXTERN FN FwSetNvramVariableToNumber (
+    IN name : ^UBYTE,
+    IN number : UWORD,
+) : UWORD
+
+EXTERN FN FwGetNvramVariableAsNumber (
+    IN name : ^UBYTE,
+    OUT num : UWORD,
+) : UWORD
+
+EXTERN FN FwGetNvramVariable (
+    IN name : ^UBYTE,
+    IN buffer : ^UBYTE,
+) : UWORD
+
+EXTERN FN FwGetNvramVariableWithDefault (
+    IN name : ^UBYTE,
+    IN buffer : ^UBYTE,
+    IN default : ^UBYTE,
+) : UWORD
+
+EXTERN FN FwGetNvramVariableAsNumberWithDefault (
+    IN name : ^UBYTE,
+    IN buffer : ^UBYTE,
+    IN default : UWORD,
+    OUT number : UWORD,
+) : UWORD
+
 EXTERN FN FwxSweepDcache ()
 
 EXTERN FN FwxHalt ()
@@ -163,4 +196,28 @@ STRUCT PACKED IoAptOsRecord
     OsName : UBYTE[16],
     BootstrapSector : ULONG,
     BootstrapCount : ULONG,
+END
+
+#DEFINE IO_NVRAM_BASE 0xF8001000
+#DEFINE IO_NVRAM_MAGIC 0x5C001CA7
+#DEFINE IO_NVRAM_VAR_COUNT 31
+
+#DEFINE IO_AMTSU_BASE 0xF80000C0
+
+STRUCT PACKED IoAmtsu
+    Select : ULONG,
+    Mid : ULONG,
+    Cmd : ULONG,
+    Data0 : ULONG,
+    Data1 : ULONG,
+END
+
+#DEFINE IO_EBUS_BASE 0xC0000000
+#DEFINE IO_EBUS_SLOT_SPACE [(128 * 1024 * 1024)]
+#DEFINE IO_EBUS_MAGIC 0x0C007CA1
+
+STRUCT PACKED IoEbusSlotInfo
+    Magic : ULONG,
+    BoardId : ULONG,
+    Name : UBYTE[16],
 END

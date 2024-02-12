@@ -74,8 +74,8 @@ FN FwCheckBootable (
         512, // size
     )
 
-    RtlPrint ( "'%s' located @ dks%ds%d\n",
-        &bootinfo^.OsName[0], partition^.Id, partitionid)
+    RtlPrint ( "dks%ds%d: %s\n",
+        partition^.Id, partitionid, &bootinfo^.OsName[0])
 END
 
 FN FwValidatePartitionTable (

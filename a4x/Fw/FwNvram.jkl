@@ -1,0 +1,260 @@
+//
+// Implements support for NVRAM variables.
+//
+
+#INCLUDE "<inc>/a4x.hjk"
+
+STRUCT PACKED FwNvramHeader
+    Magic : ULONG,
+    Padding : UBYTE[60],
+    PermanentlyReserved : UBYTE[64],
+END
+
+STRUCT PACKED FwNvramVariable
+    Name : UBYTE[32],
+    Contents : UBYTE[96],
+END
+
+FN FwInitializeNvram ()
+
+    // Check the NVRAM for consistency. Reset it if it's not consistent.
+
+    nvram := CAST IO_NVRAM_BASE TO ^FwNvramHeader
+
+    IF nvram^.Magic == IO_NVRAM_MAGIC THEN
+        // TODO checksum or something
+
+        LEAVE
+    END
+
+    RtlPrint ( "NVRAM is corrupt. Resetting.\n" )
+
+    // Zero out the NVRAM.
+
+    RtlFillMemoryWithUlong (
+        CAST IO_NVRAM_BASE TO ^VOID, // dest
+        4096, // size
+        0, // ulong
+    )
+
+    // Now set the magic number.
+
+    nvram^.Magic = IO_NVRAM_MAGIC
+END
+
+FN FwpFindNvramVariable (
+    IN name : ^UBYTE,
+) : ^FwNvramVariable
+
+    // Find an NVRAM variable by name, or return NULLPTR if not found.
+
+    var := CAST IO_NVRAM_BASE + SIZEOF FwNvramHeader TO ^FwNvramVariable
+
+    i := 0
+
+    WHILE i < IO_NVRAM_VAR_COUNT DO
+        IF RtlCompareStringWithMax ( name, &var^.Name[0], 31 ) == 0 THEN
+            // Found it!
+
+            RETURN var
+        END
+
+        var += SIZEOF FwNvramVariable
+        i += 1
+    END
+
+    RETURN NULLPTR
+END
+
+FN FwpAllocateNvramVariable (
+    IN name : ^UBYTE,
+) : ^FwNvramVariable
+
+    // Allocate a new NVRAM variable, or return NULLPTR if none available.
+
+    var := CAST IO_NVRAM_BASE + SIZEOF FwNvramHeader TO ^FwNvramVariable
+
+    i := 0
+
+    WHILE i < IO_NVRAM_VAR_COUNT DO
+        IF NOT var^.Name[0] THEN
+            // This variable is free.
+
+            RtlCopyString (
+                &var^.Name[0], // dest
+                name, // src
+                32, // bufsize
+            )
+
+            RETURN var
+        END
+
+        var += SIZEOF FwNvramVariable
+        i += 1
+    END
+
+    RETURN NULLPTR
+END
+
+FN FwSetNvramVariable (
+    IN name : ^UBYTE,
+    IN contents : ^UBYTE,
+) : UWORD
+
+    var := FwpFindNvramVariable ( name )
+
+    IF NOT var THEN
+        var = FwpAllocateNvramVariable ( name )
+
+        IF NOT var THEN
+            RETURN FALSE
+        END
+    END
+
+    // Copy new contents.
+
+    RtlCopyString (
+        &var^.Contents[0], // dest
+        contents, // src
+        96, // bufsize
+    )
+
+    RETURN TRUE
+END
+
+FN FwSetNvramVariableToNumber (
+    IN name : ^UBYTE,
+    IN number : UWORD,
+) : UWORD
+
+    var := FwpFindNvramVariable ( name )
+
+    IF NOT var THEN
+        var = FwpAllocateNvramVariable ( name )
+
+        IF NOT var THEN
+            RETURN FALSE
+        END
+    END
+
+    // Copy new contents.
+
+    RtlFormat (
+        &var^.Contents[0], // dest
+        96, // bufsize
+        "%u", // fmt
+        number,
+    )
+
+    RETURN TRUE
+END
+
+FN FwGetNvramVariableAsNumber (
+    IN name : ^UBYTE,
+    OUT num : UWORD,
+) : UWORD
+
+    var := FwpFindNvramVariable ( name )
+
+    IF NOT var THEN
+        RETURN FALSE
+    END
+
+    IF NOT RtlStringToNumber (
+        &var^.Contents[0], // src
+        96, // bufsize
+        OUT num, // number
+    ) THEN
+        num = 0
+    END
+
+    RETURN TRUE
+END
+
+FN FwGetNvramVariable (
+    IN name : ^UBYTE,
+    IN buffer : ^UBYTE,
+) : UWORD
+
+    var := FwpFindNvramVariable ( name )
+
+    IF NOT var THEN
+        RETURN FALSE
+    END
+
+    RtlCopyString (
+        buffer, // dest
+        &var^.Contents[0], // src
+        96, // bufsize
+    )
+
+    RETURN TRUE
+END
+
+FN FwGetNvramVariableWithDefault (
+    IN name : ^UBYTE,
+    IN buffer : ^UBYTE,
+    IN default : ^UBYTE,
+) : UWORD
+
+    var := FwpFindNvramVariable ( name )
+
+    IF NOT var THEN
+        var = FwpAllocateNvramVariable ( name )
+
+        IF NOT var THEN
+            RETURN FALSE
+        END
+
+        RtlCopyString (
+            &var^.Contents[0], // dest
+            default, // src
+            96, // bufsize
+        )
+    END
+
+    RtlCopyString (
+        buffer, // dest
+        &var^.Contents[0], // src
+        96, // bufsize
+    )
+
+    RETURN TRUE
+END
+
+FN FwGetNvramVariableAsNumberWithDefault (
+    IN name : ^UBYTE,
+    IN buffer : ^UBYTE,
+    IN default : UWORD,
+    OUT number : UWORD,
+) : UWORD
+
+    var := FwpFindNvramVariable ( name )
+
+    IF NOT var THEN
+        var = FwpAllocateNvramVariable ( name )
+
+        IF NOT var THEN
+            RETURN FALSE
+        END
+
+        RtlFormat (
+            &var^.Contents[0], // dest
+            96, // bufsize
+            "%u", // fmt
+            default,
+        )
+
+        RETURN default
+    END
+
+    IF NOT RtlStringToNumber (
+        &var^.Contents[0], // src
+        96, // bufsize
+        OUT number, // number
+    ) THEN
+        number = 0
+    END
+
+    RETURN TRUE
+END

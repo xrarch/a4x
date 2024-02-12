@@ -7,6 +7,7 @@
 EXTERN FN FwInitializeBump ()
 EXTERN FN FwCioEarlyInitialize ()
 EXTERN FN FwProbeDevices ()
+EXTERN FN FwInitializeNvram ()
 
 EXTERN FN FwInitializeInterrupts (
     IN procid : ULONG,
@@ -20,17 +21,25 @@ FN FwMain ()
 
     FwInitializing = TRUE
 
+    // Initialize the bump allocator.
+
     FwInitializeBump ()
+
+    // Initialize interrupts for processor 0 (us).
 
     FwInitializeInterrupts ( 0 )
 
-    // First initialize the character I/O subsystem.
+    // Initialize the character I/O subsystem.
 
     FwCioEarlyInitialize ()
 
     // Now we can say hello.
 
     RtlPrint ( "\n    XR/computer Reset Asserted\n\n" )
+
+    // Set up the NVRAM.
+
+    FwInitializeNvram ()
 
     // Now probe the devices to fill in the device database.
 

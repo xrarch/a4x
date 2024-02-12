@@ -156,6 +156,58 @@ FN FwProbeRam ()
     RtlPrint ( "Total memory: %dKB\n", FwDeviceDatabase.TotalRamBytes / 1024 )
 END
 
+FN FwProbeAmtsu ()
+
+    // Probe the amtsu peripheral bus.
+    // Nothing special, just select each device and record the MID.
+
+    amtsu := CAST IO_AMTSU_BASE TO ^IoAmtsu
+
+    i := 1
+
+    WHILE amtsu^.Cmd DO
+        BARRIER
+    END
+
+    WHILE i < 16 DO
+        amtsu^.Select = i
+        BARRIER
+
+        FwDeviceDatabase.Amtsu[i].Mid = amtsu^.Mid
+        BARRIER
+
+        i += 1
+    END
+END
+
+FN FwProbeEbus ()
+
+    // Probe EBUS.
+    // Nothing special, just select each device and record the MID.
+
+    slotinfo := CAST IO_EBUS_BASE TO ^IoEbusSlotInfo
+
+    i := 0
+
+    WHILE i < 7 DO
+        IF slotinfo^.Magic == IO_EBUS_MAGIC THEN
+            FwDeviceDatabase.Boards[i].BoardId = slotinfo^.BoardId
+
+            RtlCopyString (
+                &FwDeviceDatabase.Boards[i].Name[0], // dest
+                &slotinfo^.Name[0], // src
+                16, // bufsize
+            )
+
+            RtlPrint ( "Board '%s' @ Slot %d\n",
+                &FwDeviceDatabase.Boards[i].Name[0], i )
+        END
+
+        i += 1
+        slotinfo += IO_EBUS_SLOT_SPACE
+    END
+END
+
 EXTERN FN FwProbeDks ()
 
 FN FwProbeDevices ()
@@ -170,7 +222,7 @@ FN FwProbeDevices ()
 
     FwProbeDks ()
 
-    // FwProbeAmtsu ()
+    FwProbeAmtsu ()
 
-    // FwProbeFramebuffer ()
+    FwProbeEbus ()
 END
