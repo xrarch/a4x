@@ -1,0 +1,26 @@
+//
+// Implements support for the firmware GUI elements.
+//
+
+#INCLUDE "<inc>/a4x.hjk"
+
+FN FwInitializeGui ()
+
+    // Check for a framebuffer and keyboard.
+
+    IF NOT FwDeviceDatabase.Framebuffer.Address THEN
+        RtlPrint ( "%s No framebuffer installed\n", "GUI unavailable:" )
+
+        LEAVE
+    END
+
+    IF NOT FwDeviceDatabase.Keyboard.Id THEN
+        RtlPrint ( "%s No keyboard attached\n", "GUI unavailable:" )
+
+        LEAVE
+    END
+
+    // Initialize the screen to display the video console.
+
+    // Switch character I/O to the keyboard and video console.
+END

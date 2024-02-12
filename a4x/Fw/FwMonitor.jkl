@@ -294,7 +294,7 @@ FwCommandTable : FwCommand[FW_COMMAND_COUNT] = {
     [1] = {
         [Name] = "autoboot",
         [Function] = &FwCommandAutoBoot,
-        [Help] = "Boot with default parameters",
+        [Help] = "Boot with default parameters.",
     },
     [2] = {
         [Name] = "reset",

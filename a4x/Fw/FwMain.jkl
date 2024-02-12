@@ -11,6 +11,7 @@ EXTERN FN FwInitializeNvram ()
 EXTERN FN FwInitializeFramebuffer ()
 EXTERN FN FwUserInterface ()
 EXTERN FN FwInitializeKeyboard ()
+EXTERN FN FwInitializeGui ()
 
 EXTERN FN FwInitializeInterrupts (
     IN procid : ULONG,
@@ -62,7 +63,7 @@ FN FwMain ()
 
     // If there's a framebuffer, initialize the UI facade now.
 
-
+    FwInitializeGui ()
 
     // Decide whether to auto-boot or enter the command monitor.
 
