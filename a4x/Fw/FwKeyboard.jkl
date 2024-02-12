@@ -1,0 +1,118 @@
+//
+// Contains keyboard support for the firmware.
+//
+
+#INCLUDE "<inc>/a4x.hjk"
+
+#DEFINE IO_KEYBOARD_MID 0x4B494E36
+#DEFINE IO_KEYBOARD_READ 1
+
+FN FwInitializeKeyboard ()
+
+    // Search device database for a keyboard.
+
+    i := 0
+
+    WHILE i < FW_AMTSU_MAX DO
+        device := &FwDeviceDatabase.Amtsu[i]
+
+        IF device^.Mid == 0x8FC48FC4 THEN
+            FwDeviceDatabase.Keyboard.Id = i
+
+            LEAVE
+        END
+
+        i += 1
+    END
+END
+
+#SECTION "text"
+FwKeyboardLayout : UBYTE[50] = {
+    'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o',
+    'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '0', '1', '2', '3',
+    '4', '5', '6', '7', '8', '9', ';', ' ', ' ', '-', '=', '[', ']', '\\', 0,
+    '/', '.', 39, ',', '`'
+}
+
+#SECTION "text"
+FwKeyboardLayoutShift : UBYTE[50] = {
+    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O',
+    'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', ')', '!', '@', '#',
+    '$', '%', '^', '&', '*', ')', ':', ' ', ' ', '_', '+', '{', '}', '|', 0,
+    '?', '>', '"', '<', '~'
+}
+
+FwKeyboardCtrlDown : UBYTE
+FwKeyboardShiftDown : UBYTE
+
+FN (FwCioReadF) FwKeyboardRead () : UWORD
+
+    // Read an ASCII character from the keyboard.
+    // Non-blocking. Return -1 if none available.
+
+    amtsu := CAST IO_AMTSU_BASE TO ^IoAmtsu
+
+    id := FwDeviceDatabase.Keyboard.Id
+
+    amtsu^.Select = id
+    BARRIER
+
+    amtsu^.Cmd = IO_KEYBOARD_READ
+    BARRIER
+
+    PROBE code := amtsu^.Data0
+
+    IF code == 0xFFFF THEN
+        RETURN -1
+    END
+
+    IF code == 80 THEN
+        FwKeyboardCtrlDown = TRUE
+
+        RETURN -1
+    END
+
+    IF code == 82 THEN
+        FwKeyboardShiftDown = TRUE
+
+        RETURN -1
+    END
+
+    IF code == 32848 THEN
+        FwKeyboardCtrlDown = FALSE
+
+        RETURN -1
+    END
+
+    IF code == 32850 THEN
+        FwKeyboardShiftDown = FALSE
+
+        RETURN -1
+    END
+
+    IF code >= 50 THEN
+        IF code == 50 THEN
+            RETURN '\r'
+        END
+
+        IF code == 51 THEN
+            RETURN '\b'
+        END
+
+        RETURN -1
+    END
+
+    IF FwKeyboardShiftDown THEN
+        RETURN FwKeyboardLayoutShift[code]
+    END
+
+    RETURN FwKeyboardLayout[code]
+END
+
+// Force the table into the text section so that it stays in ROM.
+
+#SECTION "text"
+PUBLIC FwKeyboardCioBlock : FwCioBlock = {
+    [Write] = NULLPTR,
+    [Read] = &FwKeyboardRead,
+}

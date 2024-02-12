@@ -4,7 +4,8 @@
 
 #INCLUDE "<inc>/a4x.hjk"
 
-FwCurrentCioBlock : ^FwCioBlock
+FwCurrentCioOutputBlock : ^FwCioBlock
+FwCurrentCioInputBlock : ^FwCioBlock
 
 EXTERN FN FwSerialInitialize ()
 EXTERN FwSerialCioBlock : FwCioBlock
@@ -18,7 +19,8 @@ FN FwCioEarlyInitialize ()
     // Just hardwire the character I/O block to the serial block, since we don't
     // know what we have yet.
 
-    FwCurrentCioBlock = &FwSerialCioBlock
+    FwCurrentCioOutputBlock = &FwSerialCioBlock
+    FwCurrentCioInputBlock = &FwSerialCioBlock
 END
 
 FN FwCioPutCharacter (
@@ -26,13 +28,13 @@ FN FwCioPutCharacter (
 )
 
     IF byte == '\n' THEN
-        FwCurrentCioBlock^.Write ( '\r' )
+        FwCurrentCioOutputBlock^.Write ( '\r' )
     END
 
-    FwCurrentCioBlock^.Write ( byte )
+    FwCurrentCioOutputBlock^.Write ( byte )
 END
 
 FN FwCioGetCharacter () : UWORD
 
-    RETURN FwCurrentCioBlock^.Read ()
+    RETURN FwCurrentCioInputBlock^.Read ()
 END

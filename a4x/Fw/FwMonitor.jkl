@@ -214,7 +214,7 @@ FN (FwCommandF) FwCommandBoot ()
     )
 
     IF NOT part THEN
-        RtlPrint ( "No such partition found.\n" )
+        RtlPrint ( "No such disk or partition found.\n" )
 
         LEAVE
     END

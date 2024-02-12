@@ -46,6 +46,10 @@ STRUCT FwFramebufferInfoRecord
     Type : FwFramebufferType,
 END
 
+STRUCT FwKeyboardInfoRecord
+    Id : UBYTE,
+END
+
 STRUCT FwProcessorInfoRecord
     Present : UBYTE,
 END
@@ -72,6 +76,7 @@ STRUCT FwDeviceDatabaseRecord
     Boards : FwBoardInfoRecord[FW_BOARD_MAX],
     Processors : FwProcessorInfoRecord[FW_PROCESSOR_MAX],
     Framebuffer : FwFramebufferInfoRecord,
+    Keyboard : FwKeyboardInfoRecord,
     MachineType : FwMachineType,
 END
 

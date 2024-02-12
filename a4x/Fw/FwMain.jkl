@@ -10,6 +10,7 @@ EXTERN FN FwProbeDevices ()
 EXTERN FN FwInitializeNvram ()
 EXTERN FN FwInitializeFramebuffer ()
 EXTERN FN FwUserInterface ()
+EXTERN FN FwInitializeKeyboard ()
 
 EXTERN FN FwInitializeInterrupts (
     IN procid : ULONG,
@@ -54,6 +55,10 @@ FN FwMain ()
     // Initialize the framebuffer.
 
     FwInitializeFramebuffer ()
+
+    // Locate keyboard.
+
+    FwInitializeKeyboard ()
 
     // If there's a framebuffer, initialize the UI facade now.
 
