@@ -165,10 +165,6 @@ FN FwProbeAmtsu ()
 
     i := 1
 
-    WHILE amtsu^.Cmd DO
-        BARRIER
-    END
-
     WHILE i < 16 DO
         amtsu^.Select = i
         BARRIER

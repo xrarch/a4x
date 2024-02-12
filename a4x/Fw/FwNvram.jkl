@@ -15,6 +15,23 @@ STRUCT PACKED FwNvramVariable
     Contents : UBYTE[96],
 END
 
+FN FwResetNvram ()
+
+    nvram := CAST IO_NVRAM_BASE TO ^FwNvramHeader
+
+    // Zero out the NVRAM.
+
+    RtlFillMemoryWithUlong (
+        nvram, // dest
+        4096, // size
+        0, // ulong
+    )
+
+    // Now set the magic number.
+
+    nvram^.Magic = IO_NVRAM_MAGIC
+END
+
 FN FwInitializeNvram ()
 
     // Check the NVRAM for consistency. Reset it if it's not consistent.
@@ -29,17 +46,7 @@ FN FwInitializeNvram ()
 
     RtlPrint ( "NVRAM is corrupt. Resetting.\n" )
 
-    // Zero out the NVRAM.
-
-    RtlFillMemoryWithUlong (
-        CAST IO_NVRAM_BASE TO ^VOID, // dest
-        4096, // size
-        0, // ulong
-    )
-
-    // Now set the magic number.
-
-    nvram^.Magic = IO_NVRAM_MAGIC
+    FwResetNvram ()
 END
 
 FN FwpFindNvramVariable (
@@ -268,4 +275,39 @@ FN FwGetNvramVariableAsNumberWithDefault (
     END
 
     RETURN TRUE
+END
+
+FN FwDeleteNvramVariable (
+    IN name : ^UBYTE,
+) : UWORD
+
+    var := FwpFindNvramVariable ( name )
+
+    IF NOT var THEN
+        RETURN FALSE
+    END
+
+    var^.Name[0] = 0
+END
+
+FN FwListNvramVariables ()
+
+    var := CAST IO_NVRAM_BASE + SIZEOF FwNvramHeader TO ^FwNvramVariable
+
+    i := 0
+
+    WHILE i < IO_NVRAM_VAR_COUNT DO
+        IF var^.Name[0] THEN
+            // This variable exists.
+
+            IF NOT FwPaginate () THEN
+                LEAVE
+            END
+
+            RtlPrint ( " %-15s %s\n", &var^.Name[0], &var^.Contents[0] )
+        END
+
+        var += SIZEOF FwNvramVariable
+        i += 1
+    END
 END

@@ -5,6 +5,7 @@
 #INCLUDE "<inc>/a4x.hjk"
 
 FN FwAutoBoot ()
+
     // If there's exactly one bootable device, we select that.
     // Otherwise, if there's a boot-dev specified in the NVRAM, we select that.
     // Failing both of those, we can't autoboot.
@@ -57,29 +58,29 @@ FN FwAutoBoot ()
             16, // bufsize
         ) THEN
 
-            IF FwDiskNameToNumbers (
-                &diskname[0], // name
+            part := FwGetPartitionByName (
+                &diskname[0], // buffer
                 OUT diskid, // diskid
                 OUT partid, // partid
-            ) THEN
+            )
 
-                disk := &FwDeviceDatabase.Dks[diskid]
-                part := &disk^.Partitions[partid]
+            IF part AND part^.BootInfo THEN
+                selectedpartition = part
 
-                IF part^.BootInfo THEN
-                    selectedpartition = part
-                END
+            ELSE
+                RtlPrint ( "'dks%ds%d' is unavailable. ", diskid, partid )
             END
         END
     END
 
     IF selectedpartition THEN
-        RtlPrint ( "dks%ds%d\n", diskid, partid )
+        RtlPrint ( "dks%ds%d (%s)\n",
+            diskid, partid, &selectedpartition^.BootInfo^.OsName[0] )
     
         FwBootPartition ( selectedpartition )
 
     ELSE
-        RtlPrint ( "No selected boot device\n" )
+        RtlPrint ( "No selected boot device.\n" )
     END
 END
 

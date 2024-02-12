@@ -25,7 +25,7 @@ END
 #DEFINE FW_PARTITION_MAX 8
 
 STRUCT FwDksInfoRecord
-    Label : UBYTE[8],
+    Label : UBYTE[16],
     Partitions : FwDiskPartitionInfo[FW_PARTITION_MAX + 1],
 END
 

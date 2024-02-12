@@ -75,9 +75,6 @@ FN FwCheckBootable (
     )
 
     FwDeviceDatabase.BootableCount += 1
-
-    RtlPrint ( "dks%ds%d: %s\n",
-        partition^.Id, partitionid, &bootinfo^.OsName[0])
 END
 
 FN FwValidatePartitionTable (

@@ -5,6 +5,8 @@
 
 #DEFINE A4X_SECTOR_BUFFER 0x2000
 
+#DEFINE FW_MONITOR_HEIGHT 24
+
 FNPTR FwCioWriteF (
     IN byte : UWORD,
 )
@@ -76,19 +78,41 @@ EXTERN FN FwGetNvramVariableAsNumberWithDefault (
     OUT number : UWORD,
 ) : UWORD
 
+EXTERN FN FwDeleteNvramVariable (
+    IN name : ^UBYTE,
+) : UWORD
+
+EXTERN FN FwResetNvram ()
+
+EXTERN FN FwListNvramVariables ()
+
 EXTERN FN FwDiskNameToNumbers (
     IN name : ^UBYTE,
     OUT diskid : UWORD,
     OUT partid : UWORD,
 ) : UWORD
 
+EXTERN FN FwGetPartitionByName (
+    IN name : ^UBYTE,
+    OUT diskid : UWORD,
+    OUT partid : UWORD,
+) : ^FwDiskPartitionInfo
+
 EXTERN FN FwBootPartition (
     IN partition : ^FwDiskPartitionInfo,
 )
 
+EXTERN FN FwAutoBoot ()
+
+EXTERN FN FwPaginate () : UWORD
+
+EXTERN FN FwResetPagination ()
+
 EXTERN FN FwxSweepDcache ()
 
 EXTERN FN FwxHalt ()
+
+EXTERN FN FwxReset ()
 
 EXTERN FN FwxGetProcessorId () : UWORD
 

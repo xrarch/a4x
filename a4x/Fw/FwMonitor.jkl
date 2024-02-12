@@ -4,6 +4,340 @@
 
 #INCLUDE "<inc>/a4x.hjk"
 
+#DEFINE FW_TOKEN_BUFFER_SIZE 128
+
+FwCommandBuffer : UBYTE[256]
+FwTokenBuffer : UBYTE[FW_TOKEN_BUFFER_SIZE]
+
+FwNextTokenPointer : ^UBYTE
+
+FNPTR FwCommandF ()
+
+STRUCT FwCommand
+    Name : ^UBYTE,
+    Function : FwCommandF,
+    Help : ^UBYTE,
+END
+
+#DEFINE FW_COMMAND_COUNT 10
+
+// FORWARD
+EXTERN FwCommandTable : FwCommand[FW_COMMAND_COUNT]
+
+FwUsedLines : UBYTE
+FwAllLines : UBYTE
+
+FN FwPaginate () : UWORD
+
+    IF FwAllLines THEN
+        RETURN TRUE
+    END
+
+    result := TRUE
+
+    IF FwUsedLines >= FW_MONITOR_HEIGHT - 1 THEN
+        RtlPrint (
+        "\[[7m(any) for more, (a) for all, (p) for a page, (q) to quit\[[0m" )
+
+        c := -1
+
+        WHILE c == -1 DO
+            c = FwCioGetCharacter ()
+        END
+
+        RtlPrint ( "\[[2K\r" )
+
+        IF c == 'q' THEN
+            result = FALSE
+        
+        ELSEIF c == 'p' THEN
+            FwUsedLines = 0
+
+        ELSEIF c == 'a' THEN
+            FwAllLines = TRUE
+        END
+    END
+
+    FwUsedLines += 1
+
+    RETURN result
+END
+
+FN FwResetPagination ()
+    
+    FwUsedLines = 0
+    FwAllLines = FALSE
+END
+
+FN FwNextToken (
+    IN tokenbuffer : ^UBYTE,
+    IN bufsize : UWORD,
+) : UWORD
+
+    IF NOT FwNextTokenPointer THEN
+        RETURN FALSE
+    END
+
+    FwNextTokenPointer = RtlTokenize (
+        FwNextTokenPointer, // buffer
+        tokenbuffer, // tokenbuffer
+        bufsize, // bufsize
+        ' ', // delimiter
+    )
+
+    IF FwNextTokenPointer THEN
+        RETURN TRUE
+    END
+
+    RETURN FALSE
+END
+
+FN (FwCommandF) FwCommandHelp ()
+
+    FwResetPagination ()
+
+    i := 0
+
+    WHILE i < FW_COMMAND_COUNT DO
+        cmd := &FwCommandTable[i]
+
+        IF cmd^.Help THEN
+            IF NOT FwPaginate () THEN
+                LEAVE
+            END
+
+            RtlPrint ( " %-10s%s\n", cmd^.Name, cmd^.Help )
+        END
+
+        i += 1
+    END
+END
+
+FN (FwCommandF) FwCommandAutoBoot ()
+
+    FwAutoBoot ()
+END
+
+FN (FwCommandF) FwCommandReset ()
+
+    FwxReset ()
+END
+
+FN (FwCommandF) FwCommandNvReset ()
+
+    FwResetNvram ()
+END
+
+FN (FwCommandF) FwCommandListEnv ()
+
+    FwResetPagination ()
+
+    FwListNvramVariables ()
+END
+
+FN (FwCommandF) FwCommandSetEnv ()
+
+    name : UBYTE[32]
+
+    IF NOT FwNextToken (
+        &name[0], // tokenbuffer
+        32, // bufsize
+    ) THEN
+
+        RtlPrint ( "Usage: setenv [name] [contents]\n" )
+
+        LEAVE
+    END
+
+    contents : UBYTE[96]
+
+    IF NOT FwNextToken (
+        &contents[0], // tokenbuffer
+        96, // bufsize
+    ) THEN
+
+        RtlPrint ( "Usage: setenv [name] [contents]\n" )
+
+        LEAVE
+    END
+
+    IF FwSetNvramVariable (
+        &name[0], // name
+        &contents[0], // contents
+    ) THEN
+
+        RtlPrint ( " %s = '%s'\n", &name[0], &contents[0] )
+    
+    ELSE
+        RtlPrint ( "Failed to set variable '%s'\n", &name[0] )
+    END
+END
+
+FN (FwCommandF) FwCommandDelEnv ()
+
+    name : UBYTE[32]
+
+    IF NOT FwNextToken (
+        &name[0], // tokenbuffer
+        32, // bufsize
+    ) THEN
+
+        RtlPrint ( "Usage: delenv [name]\n" )
+
+        LEAVE
+    END
+
+    FwDeleteNvramVariable ( &name[0] )
+END
+
+FN (FwCommandF) FwCommandBoot ()
+
+    name : UBYTE[8]
+
+    IF NOT FwNextToken (
+        &name[0], // tokenbuffer
+        8, // bufsize
+    ) THEN
+
+        RtlPrint ( "Usage: boot [device (dksNsN)]\n" )
+
+        LEAVE
+    END
+
+    diskid : UWORD
+    partid : UWORD
+
+    part := FwGetPartitionByName (
+        &name[0], // name
+        OUT diskid, // diskid
+        OUT partid, // partid
+    )
+
+    IF NOT part THEN
+        RtlPrint ( "No such partition found.\n" )
+
+        LEAVE
+    END
+
+    IF NOT part^.BootInfo THEN
+        RtlPrint ( "No operating system installed on dks%ds%d.\n",
+            diskid, partid )
+
+        LEAVE
+    END
+
+    RtlPrint ( "Booting dks%ds%d '%s'\n",
+        diskid, partid, &part^.BootInfo^.OsName[0] )
+
+    FwBootPartition ( part )
+END
+
+FN (FwCommandF) FwCommandListDisk ()
+
+    FwResetPagination ()
+
+    i := 0
+
+    WHILE i < FW_DISK_MAX DO
+        disk := &FwDeviceDatabase.Dks[i]
+
+        IF disk^.Partitions[FW_DISK_MAX].SectorCount THEN
+            IF NOT FwPaginate () THEN
+                LEAVE
+            END
+
+            RtlPrint ( "dks%d (%d sectors) %s\n",
+                i, disk^.Partitions[8].SectorCount, &disk^.Label[0] )
+
+            j := 0
+
+            WHILE j < FW_PARTITION_MAX DO
+                part := &disk^.Partitions[j]
+
+                IF part^.SectorCount THEN
+                    IF NOT FwPaginate () THEN
+                        LEAVE
+                    END
+
+                    RtlPrint ( "    s%d (%d sectors) %s",
+                        j, part^.SectorCount, &part^.Label[0] )
+
+                    IF part^.BootInfo THEN
+                        RtlPrint ( ": Has operating system %s\n",
+                            &part^.BootInfo^.OsName[0] )
+                    
+                    ELSE
+                        RtlPrint ( "\n" )
+                    END
+                END
+
+                j += 1
+            END
+        END
+
+        i += 1
+    END
+END
+
+FN (FwCommandF) FwCommandClear ()
+
+    RtlPrint ( "\[[0m\[[1;1H\[[2J" )
+END
+
+#SECTION "text"
+FwCommandTable : FwCommand[FW_COMMAND_COUNT] = {
+    [0] = {
+        [Name] = "help",
+        [Function] = &FwCommandHelp,
+        [Help] = "Display this help text.",
+    },
+    [1] = {
+        [Name] = "autoboot",
+        [Function] = &FwCommandAutoBoot,
+        [Help] = "Boot with default parameters",
+    },
+    [2] = {
+        [Name] = "reset",
+        [Function] = &FwCommandReset,
+        [Help] = "Reset the system.",
+    },
+    [3] = {
+        [Name] = "nvreset",
+        [Function] = &FwCommandNvReset,
+        [Help] = "Reset system NVRAM.",
+    },
+    [4] = {
+        [Name] = "listenv",
+        [Function] = &FwCommandListEnv,
+        [Help] = "List NVRAM variables.",
+    },
+    [5] = {
+        [Name] = "setenv",
+        [Function] = &FwCommandSetEnv,
+        [Help] = "[name] [contents] Set the contents of an NVRAM variable.",
+    },
+    [6] = {
+        [Name] = "delenv",
+        [Function] = &FwCommandDelEnv,
+        [Help] = "[name] Delete an NVRAM variable.",
+    },
+    [7] = {
+        [Name] = "boot",
+        [Function] = &FwCommandBoot,
+        [Help] = "[device (dksNsN)] Boot from the specified partition.",
+    },
+    [8] = {
+        [Name] = "listdisk",
+        [Function] = &FwCommandListDisk,
+        [Help] = "List all disks and their partitions.",
+    },
+    [9] = {
+        [Name] = "clear",
+        [Function] = &FwCommandClear,
+        [Help] = "Clear the console.",
+    }
+}
+
 FN FwGetString (
     IN buffer : ^UBYTE,
     IN bufsize : UWORD,
@@ -44,8 +378,6 @@ FN FwGetString (
     buffer[len] = 0
 END
 
-FwCommandBuffer : UBYTE[256]
-
 FN FwCommandMonitor ()
 
     RtlPrint ( "\nFirmware Command Monitor\n" )
@@ -58,29 +390,31 @@ FN FwCommandMonitor ()
             256, // bufsize
         )
 
-        tokenbuf : UBYTE[32]
-        nexttok := &FwCommandBuffer[0]
+        FwNextTokenPointer = &FwCommandBuffer[0]
 
-        WHILE TRUE DO
-            nexttok = RtlTokenize (
-                nexttok, // buffer
-                &tokenbuf[0], // tokenbuffer
-                32, // bufsize
-                ' ', // delimiter
-            )
+        IF FwNextToken (
+            &FwTokenBuffer[0], // tokenbuffer
+            FW_TOKEN_BUFFER_SIZE, // bufsize
+        ) THEN
 
-            IF NOT nexttok THEN
-                BREAK
+            i := 0
+
+            WHILE i < FW_COMMAND_COUNT DO
+                cmd := &FwCommandTable[i]
+
+                IF RtlCompareString ( &FwTokenBuffer[0], cmd^.Name ) == 0 THEN
+                    cmd^.Function ()
+
+                    BREAK
+                END
+
+                i += 1
             END
 
-            RtlPrint ( "%s|\n", &tokenbuf[0] )
-
-            // Ideas for next stuff:
-            //
-            //  o Helper functions for tokenizing the command line, called by
-            //    command routines
-            //  o Commands stored in static array (remember to #SECTION "text"
-            //    it) w/ jackal static initializer
+            IF i == FW_COMMAND_COUNT THEN
+                RtlPrint ( "%s is not a recognized command.\n",
+                    &FwTokenBuffer[0] )
+            END
         END
     END
 END

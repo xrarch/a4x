@@ -76,6 +76,7 @@
 ; We should now be at 0xFFFE1000, the reset vector.
 
 FwxReset:
+.global FwxReset
     ; Zero out RS.
 
     mtcr rs, zero
