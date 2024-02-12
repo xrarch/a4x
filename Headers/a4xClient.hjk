@@ -1,5 +1,5 @@
 ENUM FwFramebufferType : UBYTE
-    FW_FRAMEBUFFER_ABSENT,
+    FW_FRAMEBUFFER_ABSENT, // MUST be first in the enum
     FW_FRAMEBUFFER_KINNOWFB,
 END
 
@@ -22,9 +22,11 @@ STRUCT FwDiskPartitionInfo
     Id : UBYTE,
 END
 
+#DEFINE FW_PARTITION_MAX 8
+
 STRUCT FwDksInfoRecord
     Label : UBYTE[8],
-    Partitions : FwDiskPartitionInfo[9],
+    Partitions : FwDiskPartitionInfo[FW_PARTITION_MAX + 1],
 END
 
 STRUCT FwAmtsuInfoRecord
@@ -32,12 +34,13 @@ STRUCT FwAmtsuInfoRecord
 END
 
 STRUCT FwBoardInfoRecord
+    Address : ^VOID,
     Name : UBYTE[16],
     BoardId : ULONG,
 END
 
 STRUCT FwFramebufferInfoRecord
-    Address : ^VOID,
+    Address : ^UBYTE,
     Width : UINT,
     Height : UINT,
     Type : FwFramebufferType,
@@ -53,14 +56,21 @@ ENUM FwMachineType : UBYTE
     XR_FRAME,
 END
 
+#DEFINE FW_BOARD_MAX 7
+#DEFINE FW_AMTSU_MAX 16
+#DEFINE FW_DISK_MAX 8
+#DEFINE FW_RAM_MAX 8
+#DEFINE FW_PROCESSOR_MAX 8
+
 STRUCT FwDeviceDatabaseRecord
     TotalRamBytes : ULONG,
-    ProcessorCount : ULONG,
-    Ram : FwRamRecord[8],
-    Dks : FwDksInfoRecord[8],
-    Amtsu : FwAmtsuInfoRecord[16],
-    Boards : FwBoardInfoRecord[7],
-    Processors : FwProcessorInfoRecord[8],
+    ProcessorCount : UBYTE,
+    BootableCount : UBYTE,
+    Ram : FwRamRecord[FW_RAM_MAX],
+    Dks : FwDksInfoRecord[FW_DISK_MAX],
+    Amtsu : FwAmtsuInfoRecord[FW_AMTSU_MAX],
+    Boards : FwBoardInfoRecord[FW_BOARD_MAX],
+    Processors : FwProcessorInfoRecord[FW_PROCESSOR_MAX],
     Framebuffer : FwFramebufferInfoRecord,
     MachineType : FwMachineType,
 END

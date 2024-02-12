@@ -74,6 +74,8 @@ FN FwCheckBootable (
         512, // size
     )
 
+    FwDeviceDatabase.BootableCount += 1
+
     RtlPrint ( "dks%ds%d: %s\n",
         partition^.Id, partitionid, &bootinfo^.OsName[0])
 END
@@ -134,7 +136,7 @@ FN FwInitializeDiskPartitions (
     i := 0
     base := 4
 
-    WHILE i < 8 DO
+    WHILE i < FW_DISK_MAX DO
         partinfo := &disk^.Partitions[i]
         blockpart := &bootblock^.Partitions[i]
 
@@ -164,7 +166,7 @@ FN FwInitializeDiskPartitions (
 
     i = 0
 
-    WHILE i < 8 DO
+    WHILE i < FW_PARTITION_MAX DO
         partinfo := &disk^.Partitions[i]
 
         IF partinfo^.SectorCount THEN

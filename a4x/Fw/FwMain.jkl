@@ -8,6 +8,8 @@ EXTERN FN FwInitializeBump ()
 EXTERN FN FwCioEarlyInitialize ()
 EXTERN FN FwProbeDevices ()
 EXTERN FN FwInitializeNvram ()
+EXTERN FN FwInitializeFramebuffer ()
+EXTERN FN FwUserInterface ()
 
 EXTERN FN FwInitializeInterrupts (
     IN procid : ULONG,
@@ -49,9 +51,17 @@ FN FwMain ()
 
     FwInitializing = FALSE
 
+    // Initialize the framebuffer.
+
+    FwInitializeFramebuffer ()
+
     // If there's a framebuffer, initialize the UI facade now.
 
+
+
     // Decide whether to auto-boot or enter the command monitor.
+
+    FwUserInterface ()
 
     WHILE TRUE DO
         FwxHalt ()

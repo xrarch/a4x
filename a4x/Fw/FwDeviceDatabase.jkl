@@ -21,7 +21,7 @@ FN FwProbeProcessors ()
 
     i := 0
 
-    WHILE i < XR_PROCESSOR_MAX DO
+    WHILE i < FW_PROCESSOR_MAX DO
         lsic := &(CAST IO_LSIC_BASE TO ^IoLsicTable)^.Table[i]
 
         FwProbeCheck = 1
@@ -191,6 +191,8 @@ FN FwProbeEbus ()
 
     WHILE i < 7 DO
         IF slotinfo^.Magic == IO_EBUS_MAGIC THEN
+            FwDeviceDatabase.Boards[i].Address = slotinfo
+
             FwDeviceDatabase.Boards[i].BoardId = slotinfo^.BoardId
 
             RtlCopyString (

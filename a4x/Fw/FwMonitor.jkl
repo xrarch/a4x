@@ -1,0 +1,86 @@
+//
+// Contains the command monitor for the firmware.
+//
+
+#INCLUDE "<inc>/a4x.hjk"
+
+FN FwGetString (
+    IN buffer : ^UBYTE,
+    IN bufsize : UWORD,
+)
+
+    // Collect a string into the buffer.
+
+    len := 0
+
+    WHILE TRUE DO
+        c := -1
+
+        WHILE c == -1 DO
+            c = FwCioGetCharacter ()
+        END
+
+        IF c == '\r' THEN
+            RtlPrint ( "\n" )
+
+            BREAK
+        END
+
+        IF c == '\b' THEN
+            IF len THEN
+                len -= 1
+
+                RtlPrint ( "\b \b" )
+            END
+        ELSEIF len < bufsize - 1 THEN
+            buffer[len] = c
+
+            RtlPrint ( "%c", c )
+
+            len += 1
+        END
+    END
+
+    buffer[len] = 0
+END
+
+FwCommandBuffer : UBYTE[256]
+
+FN FwCommandMonitor ()
+
+    RtlPrint ( "\nFirmware Command Monitor\n" )
+
+    WHILE TRUE DO
+        RtlPrint ( ">> " )
+
+        FwGetString (
+            &FwCommandBuffer[0], // buffer
+            256, // bufsize
+        )
+
+        tokenbuf : UBYTE[32]
+        nexttok := &FwCommandBuffer[0]
+
+        WHILE TRUE DO
+            nexttok = RtlTokenize (
+                nexttok, // buffer
+                &tokenbuf[0], // tokenbuffer
+                32, // bufsize
+                ' ', // delimiter
+            )
+
+            IF NOT nexttok THEN
+                BREAK
+            END
+
+            RtlPrint ( "%s|\n", &tokenbuf[0] )
+
+            // Ideas for next stuff:
+            //
+            //  o Helper functions for tokenizing the command line, called by
+            //    command routines
+            //  o Commands stored in static array (remember to #SECTION "text"
+            //    it) w/ jackal static initializer
+        END
+    END
+END

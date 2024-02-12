@@ -1,0 +1,106 @@
+//
+// Contains the user interface for the firmware.
+//
+
+#INCLUDE "<inc>/a4x.hjk"
+
+FN FwAutoBoot ()
+    // If there's exactly one bootable device, we select that.
+    // Otherwise, if there's a boot-dev specified in the NVRAM, we select that.
+    // Failing both of those, we can't autoboot.
+
+    RtlPrint ( "Autoboot: " )
+
+    selectedpartition : ^FwDiskPartitionInfo = NULLPTR
+
+    diskid : UWORD
+    partid : UWORD
+
+    IF FwDeviceDatabase.BootableCount == 1 THEN
+        // Find it.
+
+        i := 0
+
+        WHILE i < FW_DISK_MAX DO
+            disk := &FwDeviceDatabase.Dks[i]
+
+            j := 0
+
+            WHILE j < FW_PARTITION_MAX DO
+                IF disk^.Partitions[j].BootInfo THEN
+                    diskid = i
+                    partid = j
+
+                    selectedpartition = &disk^.Partitions[j]
+
+                    BREAK
+                END
+
+                j += 1
+            END
+
+            IF selectedpartition THEN
+                BREAK
+            END
+
+            i += 1
+        END
+    
+    ELSEIF FwDeviceDatabase.BootableCount THEN
+        // Look at NVRAM.
+
+        diskname : UBYTE[16]
+
+        IF FwGetNvramVariable (
+            "boot-dev", // name
+            &diskname[0], // buffer
+            16, // bufsize
+        ) THEN
+
+            IF FwDiskNameToNumbers (
+                &diskname[0], // name
+                OUT diskid, // diskid
+                OUT partid, // partid
+            ) THEN
+
+                disk := &FwDeviceDatabase.Dks[diskid]
+                part := &disk^.Partitions[partid]
+
+                IF part^.BootInfo THEN
+                    selectedpartition = part
+                END
+            END
+        END
+    END
+
+    IF selectedpartition THEN
+        RtlPrint ( "dks%ds%d\n", diskid, partid )
+    
+        FwBootPartition ( selectedpartition )
+
+    ELSE
+        RtlPrint ( "No selected boot device\n" )
+    END
+END
+
+EXTERN FN FwCommandMonitor ()
+
+FN FwUserInterface ()
+
+    // Depending on the value of the auto-boot? nvram variable, we want to
+    // either go ahead and boot, or drop into the command monitor.
+
+    varcontents : UBYTE[8]
+
+    IF FwGetNvramVariableWithDefault (
+        "auto-boot?", // name
+        &varcontents[0], // buffer
+        "true", // default
+        8, // bufsize
+    ) AND RtlCompareString ( &varcontents[0], "true" ) == 0 THEN
+
+        FwAutoBoot ()
+    END
+
+    FwCommandMonitor ()
+END

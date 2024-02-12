@@ -89,3 +89,10 @@ EXTERN FN RtlCopyString (
     IN src : ^UBYTE,
     IN bufsize : UWORD,
 )
+
+EXTERN FN RtlTokenize (
+    IN buffer : ^UBYTE,
+    IN tokenbuffer : ^UBYTE,
+    IN bufsize : UWORD,
+    IN delimiter : UBYTE,
+) : ^UBYTE

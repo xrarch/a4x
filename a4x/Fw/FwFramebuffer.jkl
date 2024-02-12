@@ -1,0 +1,43 @@
+//
+// Contains framebuffer support for the firmware.
+//
+
+#INCLUDE "<inc>/a4x.hjk"
+
+#DEFINE IO_KINNOWFB_ID 0x4B494E36
+
+#DEFINE IO_KINNOWFB_BUFFER 0x100000
+#DEFINE IO_KINNOWFB_SIZE 0x3000
+
+FN FwInitializeFramebuffer ()
+
+    // Search device database for a kinnowfb framebuffer.
+
+    i := 0
+
+    WHILE i < FW_BOARD_MAX DO
+        board := &FwDeviceDatabase.Boards[i]
+
+        IF board^.BoardId == IO_KINNOWFB_ID THEN
+            // Use this as the boot framebuffer.
+
+            fb := &FwDeviceDatabase.Framebuffer
+
+            fb^.Address = board^.Address + IO_KINNOWFB_BUFFER
+
+            size := (CAST board^.Address + IO_KINNOWFB_SIZE TO ^ULONG)^
+
+            fb^.Height = (size >> 12) & 4095
+            fb^.Width = size & 4095
+
+            fb^.Type = FW_FRAMEBUFFER_KINNOWFB
+
+            RtlPrint ( "%dx%d 8-bit Color Framebuffer @ 0x%p\n",
+                fb^.Width, fb^.Height, fb^.Address )
+
+            LEAVE
+        END
+
+        i += 1
+    END
+END

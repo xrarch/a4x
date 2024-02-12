@@ -165,6 +165,7 @@ FN FwGetNvramVariableAsNumber (
         96, // bufsize
         OUT num, // number
     ) THEN
+
         num = 0
     END
 
@@ -174,6 +175,7 @@ END
 FN FwGetNvramVariable (
     IN name : ^UBYTE,
     IN buffer : ^UBYTE,
+    IN bufsize : UWORD,
 ) : UWORD
 
     var := FwpFindNvramVariable ( name )
@@ -182,10 +184,14 @@ FN FwGetNvramVariable (
         RETURN FALSE
     END
 
+    IF bufsize > 96 THEN
+        bufsize = 96
+    END
+
     RtlCopyString (
         buffer, // dest
         &var^.Contents[0], // src
-        96, // bufsize
+        bufsize, // bufsize
     )
 
     RETURN TRUE
@@ -195,6 +201,7 @@ FN FwGetNvramVariableWithDefault (
     IN name : ^UBYTE,
     IN buffer : ^UBYTE,
     IN default : ^UBYTE,
+    IN bufsize : UWORD,
 ) : UWORD
 
     var := FwpFindNvramVariable ( name )
@@ -213,10 +220,14 @@ FN FwGetNvramVariableWithDefault (
         )
     END
 
+    IF bufsize > 96 THEN
+        bufsize = 96
+    END
+
     RtlCopyString (
         buffer, // dest
         &var^.Contents[0], // src
-        96, // bufsize
+        bufsize, // bufsize
     )
 
     RETURN TRUE
@@ -224,7 +235,6 @@ END
 
 FN FwGetNvramVariableAsNumberWithDefault (
     IN name : ^UBYTE,
-    IN buffer : ^UBYTE,
     IN default : UWORD,
     OUT number : UWORD,
 ) : UWORD
@@ -253,6 +263,7 @@ FN FwGetNvramVariableAsNumberWithDefault (
         96, // bufsize
         OUT number, // number
     ) THEN
+
         number = 0
     END
 

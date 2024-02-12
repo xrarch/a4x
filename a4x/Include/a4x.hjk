@@ -60,20 +60,31 @@ EXTERN FN FwGetNvramVariableAsNumber (
 EXTERN FN FwGetNvramVariable (
     IN name : ^UBYTE,
     IN buffer : ^UBYTE,
+    IN bufsize : UWORD,
 ) : UWORD
 
 EXTERN FN FwGetNvramVariableWithDefault (
     IN name : ^UBYTE,
     IN buffer : ^UBYTE,
     IN default : ^UBYTE,
+    IN bufsize : UWORD,
 ) : UWORD
 
 EXTERN FN FwGetNvramVariableAsNumberWithDefault (
     IN name : ^UBYTE,
-    IN buffer : ^UBYTE,
     IN default : UWORD,
     OUT number : UWORD,
 ) : UWORD
+
+EXTERN FN FwDiskNameToNumbers (
+    IN name : ^UBYTE,
+    OUT diskid : UWORD,
+    OUT partid : UWORD,
+) : UWORD
+
+EXTERN FN FwBootPartition (
+    IN partition : ^FwDiskPartitionInfo,
+)
 
 EXTERN FN FwxSweepDcache ()
 
@@ -105,8 +116,6 @@ EXTERN FN FwSendIpi (
     IN function : FwIpiF,
     IN context : ^VOID
 ) : UBYTE
-
-#DEFINE XR_PROCESSOR_MAX 8
 
 STRUCT FwIpiPacket
     Function : FwIpiF,

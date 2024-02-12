@@ -1,0 +1,14 @@
+//
+// Contains code to load the bootstrap software.
+//
+
+#INCLUDE "<inc>/a4x.hjk"
+
+FN FwBootPartition (
+    IN partition : ^FwDiskPartitionInfo,
+)
+
+    // Load the bootstrap software from the provided partition, and jump to it.
+
+    
+END

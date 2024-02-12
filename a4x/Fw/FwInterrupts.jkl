@@ -26,7 +26,7 @@ FN FwInitializeInterrupts (
     FwxEnableInterrupts ()
 END
 
-FwPendingPackets : ^FwIpiPacket[XR_PROCESSOR_MAX]
+FwPendingPackets : ^FwIpiPacket[FW_PROCESSOR_MAX]
 
 FN FwSendIpi (
     IN targetid : ULONG,

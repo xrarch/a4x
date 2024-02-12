@@ -60,7 +60,7 @@ FN FwProbeDks ()
 
             // Set up virtual partition 8 to be the entire disk.
 
-            p8 := &FwDeviceDatabase.Dks[i].Partitions[8]
+            p8 := &FwDeviceDatabase.Dks[i].Partitions[FW_PARTITION_MAX]
 
             p8^.BaseSector = 0
             p8^.SectorCount = sectors
@@ -82,10 +82,10 @@ FN FwProbeDks ()
     WHILE i < IO_DKS_MAX DO
         disk := &FwDeviceDatabase.Dks[i]
 
-        IF disk^.Partitions[8].SectorCount THEN
+        IF disk^.Partitions[FW_PARTITION_MAX].SectorCount THEN
             FwInitializeDiskPartitions (
                 disk, // disk
-                &disk^.Partitions[8], // partition
+                &disk^.Partitions[FW_PARTITION_MAX], // partition
             )
         END
 
@@ -187,4 +187,78 @@ FN FwReadDisk (
     // DMA was performed so sweep the Dcache.
 
     FwxSweepDcache ()
+END
+
+FN FwDiskNameToNumbers (
+    IN name : ^UBYTE,
+    OUT diskid : UWORD,
+    OUT partid : UWORD,
+) : UWORD
+
+    IF RtlCompareStringWithMax ( name, "dks", 3 ) != 0 THEN
+        RETURN FALSE
+    END
+
+    num : UBYTE[8]
+    num[0] = 0
+
+    i := 3
+    j := 0
+
+    WHILE name[i] AND name[i] != 's' AND j < 7 DO
+        num[j] = name[i]
+        num[j + 1] = 0
+
+        j += 1
+        i += 1
+    END
+
+    IF NOT j OR name[i] != 's' THEN
+        RETURN FALSE
+    END
+
+    IF NOT RtlStringToNumber (
+        &num[0], // src
+        8, // bufsize
+        OUT diskid, // num
+    ) THEN
+
+        RETURN FALSE
+    END
+
+    IF diskid >= FW_DISK_MAX THEN
+        RETURN FALSE
+    END
+
+    num[0] = 0
+
+    i = j + 3 + 1
+    j = 0
+
+    WHILE name[i] AND j < 7 DO
+        num[j] = name[i]
+        num[j + 1] = 0
+
+        j += 1
+        i += 1
+    END
+
+    IF NOT j OR name[i] THEN
+        RETURN FALSE
+    END
+
+    IF NOT RtlStringToNumber (
+        &num[0], // src
+        8, // bufsize
+        OUT partid, // num
+    ) THEN
+
+        RETURN FALSE
+    END
+
+    IF partid >= FW_PARTITION_MAX THEN
+        RETURN FALSE
+    END
+
+    RETURN TRUE
 END
