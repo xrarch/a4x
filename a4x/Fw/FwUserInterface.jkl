@@ -68,7 +68,7 @@ FN FwAutoBoot ()
                 selectedpartition = part
 
             ELSE
-                RtlPrint ( "'dks%ds%d' is unavailable. ", diskid, partid )
+                RtlPrint ( "'%s' is unavailable. ", &diskname[0] )
             END
         END
     END
