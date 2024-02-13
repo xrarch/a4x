@@ -195,6 +195,9 @@ FN FwDiskNameToNumbers (
     OUT partid : UWORD,
 ) : UWORD
 
+    // Parse a disk name into a disk ID and partition ID. The disk name must be
+    // of the form dks<diskid>s<partid>.
+
     IF RtlCompareStringWithMax ( name, "dks", 3 ) != 0 THEN
         RETURN FALSE
     END
@@ -268,6 +271,9 @@ FN FwGetPartitionByName (
     OUT diskid : UWORD,
     OUT partid : UWORD,
 ) : ^FwDiskPartitionInfo
+
+    // Get a pointer to a partition info by name. If the partition doesn't
+    // exist, return a null pointer.
 
     IF FwDiskNameToNumbers (
         name, // name

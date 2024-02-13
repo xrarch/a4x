@@ -386,6 +386,7 @@ FN FwGetString (
 
                 RtlPrint ( "\b \b" )
             END
+
         ELSEIF len < bufsize - 1 THEN
             buffer[len] = c
 
