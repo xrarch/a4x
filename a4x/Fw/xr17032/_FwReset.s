@@ -152,4 +152,6 @@ FwxSweepDcache:
 
 .ds "XR/17032 BootROM, by Will"
 
+.section data
+
 .section bss
