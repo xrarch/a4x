@@ -78,12 +78,14 @@ FN FwProbeRamSlot (
 
     size := 0
 
-    // We start probing at the end of the page frame so that we make sure we
-    // only see complete page frames.
+    // Set a bus error callback which will clear the FwProbeCheck flag.
 
     FwBusErrorCallback = &FwProbeBusError
 
     FwProbeCheck = 1
+
+    // We start probing at the end of the page frame so that we make sure we
+    // only see complete page frames.
 
     base += 0xFFF
 
@@ -127,7 +129,8 @@ FN FwProbeRam ()
         probebase := base
 
         IF i == 0 THEN
-            // Skip the low 32KB.
+            // Skip the low 32KB, since that's where firmware lives and we will
+            // corrupt ourselves if we write there.
 
             probebase += 32 * 1024
         END

@@ -29,6 +29,8 @@ FwAllLines : UBYTE
 
 FN FwPaginate () : UWORD
 
+    // Simple text pagination for the console.
+
     IF FwAllLines THEN
         RETURN TRUE
     END
@@ -65,6 +67,8 @@ END
 
 FN FwResetPagination ()
     
+    // Reset the pagination; should be called before printing a list.
+
     FwUsedLines = 0
     FwAllLines = FALSE
 END
@@ -73,6 +77,8 @@ FN FwNextToken (
     IN tokenbuffer : ^UBYTE,
     IN bufsize : UWORD,
 ) : UWORD
+
+    // Helper routine for getting the next token from a monitor command line.
 
     IF NOT FwNextTokenPointer THEN
         RETURN FALSE
@@ -93,6 +99,8 @@ FN FwNextToken (
 END
 
 FN (FwCommandF) FwCommandHelp ()
+
+    // Print the help table.
 
     FwResetPagination ()
 
@@ -137,6 +145,8 @@ END
 
 FN (FwCommandF) FwCommandSetEnv ()
 
+    // Set an NVRAM variable.
+
     name : UBYTE[32]
 
     IF NOT FwNextToken (
@@ -175,6 +185,8 @@ END
 
 FN (FwCommandF) FwCommandDelEnv ()
 
+    // Delete an NVRAM variable.
+
     name : UBYTE[32]
 
     IF NOT FwNextToken (
@@ -191,6 +203,8 @@ FN (FwCommandF) FwCommandDelEnv ()
 END
 
 FN (FwCommandF) FwCommandBoot ()
+
+    // Boot from a user-specified partition.
 
     name : UBYTE[8]
 
@@ -233,6 +247,9 @@ FN (FwCommandF) FwCommandBoot ()
 END
 
 FN (FwCommandF) FwCommandListDisk ()
+
+    // List the disks and their partitions.
+    // Also whether or not they have an OS installed.
 
     FwResetPagination ()
 
@@ -280,6 +297,9 @@ FN (FwCommandF) FwCommandListDisk ()
 END
 
 FN (FwCommandF) FwCommandClear ()
+
+    // Print magic ANSI-compatible sequence to clear the terminal and reset the
+    // cursor back to the top left.
 
     RtlPrint ( "\[[0m\[[1;1H\[[2J" )
 END
