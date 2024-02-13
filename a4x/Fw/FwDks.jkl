@@ -175,6 +175,9 @@ FN FwReadDisk (
         dks^.Cmd = IO_DKS_READ
         BARRIER
 
+        // Poll for transfer completion (we do not generally use interrupts in
+        // the firmware).
+
         WHILE dks^.Cmd DO
             BARRIER
         END
@@ -184,7 +187,8 @@ FN FwReadDisk (
         buffer += 512
     END
 
-    // DMA was performed so sweep the Dcache.
+    // DMA was performed, so sweep the Dcache as it is no longer coherent with
+    // main memory.
 
     FwxSweepDcache ()
 END
