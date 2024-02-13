@@ -11,6 +11,8 @@ FN FwInitializeInterrupts (
 )
 
     // Initialize the LSIC for the current processor.
+    // Set the mask such that only the IPI interrupt (IRQ1) is enabled, and
+    // disable all other interrupts.
 
     mylsic := &(CAST IO_LSIC_BASE TO ^IoLsicTable)^.Table[procid]
 
