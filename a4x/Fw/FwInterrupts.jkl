@@ -16,8 +16,8 @@ FN FwInitializeInterrupts (
 
     mylsic := &(CAST IO_LSIC_BASE TO ^IoLsicTable)^.Table[procid]
 
-    mylsic^.Mask0 = 0x00000001
-    mylsic^.Mask1 = 0x00000000
+    mylsic^.Mask0 = 0xFFFFFFFD
+    mylsic^.Mask1 = 0xFFFFFFFF
     mylsic^.Pending0 = 0
     mylsic^.Pending1 = 0
     mylsic^.Ipl = 63

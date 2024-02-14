@@ -189,6 +189,7 @@ STRUCT FwExceptionRecord
     s17 : ULONG,
     Lr : ULONG,
     Epc : ULONG,
+    Sp : ULONG,
 END
 
 EXTERN FwDeviceDatabase : FwDeviceDatabaseRecord
@@ -233,7 +234,8 @@ STRUCT PACKED IoAptBootBlock
     Label : UBYTE[16],
 END
 
-#DEFINE IO_APT_OS_RECORD_MAGIC 0x45544E41
+#DEFINE IO_APT_A3X_OS_RECORD_MAGIC 0x45544E41
+#DEFINE IO_APT_A4X_OS_RECORD_MAGIC 0x796D6173
 
 STRUCT PACKED IoAptOsRecord
     Magic : ULONG,

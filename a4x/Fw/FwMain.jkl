@@ -80,6 +80,8 @@ FN FwMain ()
     END
 END
 
+EXTERN FN FwxWaitForIpis ()
+
 FN FwProcessorStartup (
     IN procid : UWORD,
 )
@@ -94,9 +96,7 @@ FN FwProcessorStartup (
 
     // Here we will wait for IPIs forever.
 
-    WHILE TRUE DO
-        FwxHalt ()
-    END
+    FwxWaitForIpis ()
 END
 
 FN FwCrash (

@@ -39,6 +39,7 @@ FwxExceptionVector:
     mov  long [sp + FwExceptionRecord_s16], s16
     mov  long [sp + FwExceptionRecord_s17], s17
     mov  long [sp + FwExceptionRecord_Lr], lr
+    mov  long [sp + FwExceptionRecord_Sp], sp
 
     mfcr t0, epc
     mov  long [sp + FwExceptionRecord_Epc], t0
@@ -126,8 +127,8 @@ FN FwExceptionVector (
     ELSE
         // Something bad happened.
 
-        FwCrash ( "exc=%d proc=%d tf=%p ba=%p",
-            ecause, procid, trapframe, badaddr )
+        FwCrash ( "exc=%d proc=%d tf=%p ba=%p epc=%p sp=%p",
+            ecause, procid, trapframe, badaddr, trapframe^.Epc, trapframe^.Sp )
 
         WHILE TRUE DO END
     END

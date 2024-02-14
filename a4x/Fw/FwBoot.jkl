@@ -4,11 +4,135 @@
 
 #INCLUDE "<inc>/a4x.hjk"
 
+EXTERN _text_size : UBYTE
+EXTERN _data_size : UBYTE
+
+#DEFINE FW_XLOFF_MAGIC 0x99584F46
+
+STRUCT FwXloff
+    Magic : ULONG,
+    SymbolTableOffset : ULONG,
+    SymbolCount : ULONG,
+    StringTableOffset : ULONG,
+    StringTableSize : ULONG,
+    TargetArchitecture : ULONG,
+    EntrySymbol : ULONG,
+    Flags : ULONG,
+    TimeStamp : ULONG,
+    SectionTableOffset : ULONG,
+    SectionCount : ULONG,
+    ImportTableOffset : ULONG,
+    ImportCount : ULONG,
+    HeadLength : ULONG,
+END
+
+STRUCT FwXloffSymbol
+    NameOffset : ULONG,
+    Value : ULONG,
+    SectionIndex : UINT,
+    Type : UBYTE,
+    Flags : UBYTE,
+END
+
+STRUCT FwXloffSectionHeader
+    NameOffset : ULONG,
+    DataOffset : ULONG,
+    DataSize : ULONG,
+    VirtualAddress : ULONG,
+    RelocTableOffset : ULONG,
+    RelocCount : ULONG,
+    Flags : ULONG,
+END
+
+EXTERN FN FwxJumpToA3X (
+    IN entrypoint : ULONG,
+)
+
+FN FwChainBoot (
+    IN partition : ^FwDiskPartitionInfo,
+)
+
+    // Locate the a3x image.
+
+    a3x := CAST XR_ROM_START + &_text_size + &_data_size TO ^FwXloff
+
+    IF a3x^.Magic != FW_XLOFF_MAGIC THEN
+        RtlPrint ( "Can't load this operating system, because it is a legacy
+operating system and there is no a3x image.\n" )
+
+        LEAVE
+    END
+
+    namebuf : UBYTE[16]
+
+    RtlFormat (
+        &namebuf[0], // dest
+        16, // bufsize
+        "/disks/%d/%c", // fmt
+        partition^.Id,
+        'a' + partition^.PartitionId,
+    )
+
+    FwSetNvramVariable (
+        "instant-boot", // name
+        &namebuf[0], // contents
+    )
+
+    // From now on we can't touch RAM because we're destroying it by loading a3x
+    // over it.
+
+    entrypoint := (CAST a3x +
+        a3x^.SymbolTableOffset +
+        a3x^.EntrySymbol * SIZEOF FwXloffSymbol TO ^FwXloffSymbol)^.Value
+
+    // Load text.
+
+    section := CAST a3x + a3x^.SectionTableOffset TO ^FwXloffSectionHeader
+
+    entrypoint += section^.VirtualAddress
+
+    RtlCopyBytes (
+        CAST section^.VirtualAddress TO ^VOID, // dest
+        a3x + section^.DataOffset, // src
+        section^.DataSize, // size
+    )
+
+    // Load data.
+
+    section += SIZEOF FwXloffSectionHeader
+
+    RtlCopyBytes (
+        CAST section^.VirtualAddress TO ^VOID, // dest
+        a3x + section^.DataOffset, // src
+        section^.DataSize, // size
+    )
+
+    // Zero bss.
+
+    section += SIZEOF FwXloffSectionHeader
+
+    RtlFillMemoryWithUlong (
+        CAST section^.VirtualAddress TO ^VOID, // dest
+        section^.DataSize, // size
+        0, // ulong
+    )
+
+    FwxJumpToA3X ( entrypoint )
+END
+
 FN FwBootPartition (
     IN partition : ^FwDiskPartitionInfo,
 )
 
     // Load the bootstrap software from the provided partition, and jump to it.
 
-    
+    bootinfo := partition^.BootInfo
+
+    IF bootinfo^.IsLegacy THEN
+        // We have to chain load a3x to load this operating system.
+
+        FwChainBoot ( partition )
+
+        LEAVE
+    END
 END

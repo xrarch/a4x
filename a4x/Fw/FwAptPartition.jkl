@@ -28,7 +28,9 @@ FN FwCheckBootable (
         LEAVE
     END
 
-    IF osrecord^.Magic != IO_APT_OS_RECORD_MAGIC THEN
+    IF osrecord^.Magic != IO_APT_A3X_OS_RECORD_MAGIC AND
+        osrecord^.Magic != IO_APT_A4X_OS_RECORD_MAGIC THEN
+
         LEAVE
     END
 
@@ -48,6 +50,8 @@ FN FwCheckBootable (
 
     bootinfo^.BootstrapSector = osrecord^.BootstrapSector
     bootinfo^.BootstrapCount = osrecord^.BootstrapCount
+
+    bootinfo^.IsLegacy = osrecord^.Magic == IO_APT_A3X_OS_RECORD_MAGIC
 
     partition^.BootInfo = bootinfo
 

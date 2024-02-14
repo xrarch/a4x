@@ -12,6 +12,7 @@ STRUCT FwDiskBootInfo
     BootstrapSector : ULONG,
     BootstrapCount : ULONG,
     Badge : UBYTE[512],
+    IsLegacy : UBYTE,
 END
 
 STRUCT FwDiskPartitionInfo

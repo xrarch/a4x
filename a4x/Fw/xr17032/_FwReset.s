@@ -150,6 +150,18 @@ FwxSweepDcache:
     mtcr dcachectrl, t0
     ret
 
+FwxJumpToA3X:
+.global FwxJumpToA3X
+    mtcr rs, zero
+    la   sp, 0x4000
+    jr   a0
+
+FwxWaitForIpis:
+.global FwxWaitForIpis
+.loop:
+    hlt
+    b    .loop
+
 .ds "XR/17032 BootROM, by Will"
 
 .section data
