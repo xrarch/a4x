@@ -4,6 +4,12 @@
 
 #INCLUDE "<inc>/a4x.hjk"
 
+PUBLIC FwMachineTypeString : ^UBYTE[3] = {
+    [XR_STATION] = "XR/station",
+    [XR_MP] = "XR/MP",
+    [XR_FRAME] = "XR/frame",
+}
+
 FN FwAutoBoot ()
 
     // If there's exactly one bootable device, we select that.
@@ -84,9 +90,27 @@ FN FwAutoBoot ()
     END
 END
 
+FN FwPrintBanner ()
+
+    RtlPrint ( "\n    Welcome to %s!\n",
+        FwMachineTypeString[FwDeviceDatabase.MachineType] )
+
+    RtlPrint ( "    %dKB RAM.", FwDeviceDatabase.TotalRamBytes / 1024 )
+
+    IF FwDeviceDatabase.MachineType != XR_STATION THEN
+        RtlPrint ( " %d XR/17032 Processors.", FwDeviceDatabase.ProcessorCount )
+    END
+
+    RtlPrint ( "\n\n" )
+END
+
 EXTERN FN FwCommandMonitor ()
 
-FN FwUserInterface ()
+FN FwTextUserInterface ()
+
+    // Print the banner.
+
+    FwPrintBanner ()
 
     // Depending on the value of the auto-boot? nvram variable, we want to
     // either go ahead and boot, or drop into the command monitor.

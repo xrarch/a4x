@@ -19,10 +19,8 @@ STRUCT FwCommand
     Help : ^UBYTE,
 END
 
-#DEFINE FW_COMMAND_COUNT 10
-
 // FORWARD
-EXTERN FwCommandTable : FwCommand[FW_COMMAND_COUNT]
+EXTERN FwCommandTable : FwCommand[]
 
 FwUsedLines : UBYTE
 FwAllLines : UBYTE
@@ -106,7 +104,7 @@ FN (FwCommandF) FwCommandHelp ()
 
     i := 0
 
-    WHILE i < FW_COMMAND_COUNT DO
+    WHILE FwCommandTable[i].Name DO
         cmd := &FwCommandTable[i]
 
         IF cmd^.Help THEN
@@ -305,57 +303,63 @@ FN (FwCommandF) FwCommandClear ()
 END
 
 #SECTION "text"
-FwCommandTable : FwCommand[FW_COMMAND_COUNT] = {
-    [0] = {
+FwCommandTable : FwCommand[] = {
+    {
         [Name] = "help",
         [Function] = &FwCommandHelp,
         [Help] = "Display this help text.",
     },
-    [1] = {
+    {
         [Name] = "autoboot",
         [Function] = &FwCommandAutoBoot,
         [Help] = "Boot with default parameters.",
     },
-    [2] = {
+    {
         [Name] = "reset",
         [Function] = &FwCommandReset,
         [Help] = "Reset the system.",
     },
-    [3] = {
+    {
         [Name] = "nvreset",
         [Function] = &FwCommandNvReset,
         [Help] = "Reset system NVRAM.",
     },
-    [4] = {
+    {
         [Name] = "listenv",
         [Function] = &FwCommandListEnv,
         [Help] = "List NVRAM variables.",
     },
-    [5] = {
+    {
         [Name] = "setenv",
         [Function] = &FwCommandSetEnv,
         [Help] = "[name] [contents] Set the contents of an NVRAM variable.",
     },
-    [6] = {
+    {
         [Name] = "delenv",
         [Function] = &FwCommandDelEnv,
         [Help] = "[name] Delete an NVRAM variable.",
     },
-    [7] = {
+    {
         [Name] = "boot",
         [Function] = &FwCommandBoot,
         [Help] = "[device (dksNsN)] Boot from the specified partition.",
     },
-    [8] = {
+    {
         [Name] = "listdisk",
         [Function] = &FwCommandListDisk,
         [Help] = "List all disks and their partitions.",
     },
-    [9] = {
+    {
         [Name] = "clear",
         [Function] = &FwCommandClear,
         [Help] = "Clear the console.",
-    }
+    },
+
+    // Sentinel
+
+    {
+        [Name] = NULLPTR,
+    },
 }
 
 FN FwGetString (
@@ -420,7 +424,7 @@ FN FwCommandMonitor ()
 
             i := 0
 
-            WHILE i < FW_COMMAND_COUNT DO
+            WHILE FwCommandTable[i].Name DO
                 cmd := &FwCommandTable[i]
 
                 IF RtlCompareString ( &FwTokenBuffer[0], cmd^.Name ) == 0 THEN
@@ -432,7 +436,7 @@ FN FwCommandMonitor ()
                 i += 1
             END
 
-            IF i == FW_COMMAND_COUNT THEN
+            IF NOT FwCommandTable[i].Name THEN
                 RtlPrint ( "%s is not a recognized command.\n",
                     &FwTokenBuffer[0] )
             END

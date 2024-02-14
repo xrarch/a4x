@@ -9,7 +9,7 @@ EXTERN FN FwCioEarlyInitialize ()
 EXTERN FN FwProbeDevices ()
 EXTERN FN FwInitializeNvram ()
 EXTERN FN FwInitializeFramebuffer ()
-EXTERN FN FwUserInterface ()
+EXTERN FN FwTextUserInterface ()
 EXTERN FN FwInitializeKeyboard ()
 EXTERN FN FwInitializeGui ()
 
@@ -73,7 +73,7 @@ FN FwMain ()
 
     // Decide whether to auto-boot or enter the command monitor.
 
-    FwUserInterface ()
+    FwTextUserInterface ()
 
     WHILE TRUE DO
         FwxHalt ()
