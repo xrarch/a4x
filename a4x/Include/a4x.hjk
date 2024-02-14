@@ -137,6 +137,11 @@ EXTERN FwSelectedBootPartition : ^FwDiskPartitionInfo
 
 EXTERN FwBootableTable : ^FwDiskPartitionInfo[FW_DISK_MAX * FW_PARTITION_MAX]
 
+EXTERN FwCurrentCioOutputBlock : ^FwCioBlock
+EXTERN FwCurrentCioInputBlock : ^FwCioBlock
+
+EXTERN FwKeyboardCioBlock : FwCioBlock
+
 FNPTR FwIpiF (
     IN context : ^VOID,
 )

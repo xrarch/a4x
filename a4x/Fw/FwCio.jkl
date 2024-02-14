@@ -4,8 +4,8 @@
 
 #INCLUDE "<inc>/a4x.hjk"
 
-FwCurrentCioOutputBlock : ^FwCioBlock
-FwCurrentCioInputBlock : ^FwCioBlock
+PUBLIC FwCurrentCioOutputBlock : ^FwCioBlock
+PUBLIC FwCurrentCioInputBlock : ^FwCioBlock
 
 EXTERN FN FwSerialInitialize ()
 EXTERN FwSerialCioBlock : FwCioBlock

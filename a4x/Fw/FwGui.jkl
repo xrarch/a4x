@@ -316,7 +316,7 @@ FN FvDrawShadowBox (
     // Note that the width and height do not include the shadow.
 
     // Draw the central box.
-
+#IF 0
     FvDrawEmptyRectangle (
         0x00, // color
         x, // x
@@ -324,7 +324,7 @@ FN FvDrawShadowBox (
         w, // w
         h, // h
     )
-
+#END
     // Draw the bottom part of the shadow.
 
     FvDrawFilledRectangle (
@@ -408,7 +408,7 @@ FN FwDrawBackground ()
     FvDrawRleImage (
         &FwLogoBmp, // bmp
         FwDeviceDatabase.Framebuffer.Width / 2 - 300, // x
-        20, // y
+        FwDeviceDatabase.Framebuffer.Height - 116 - 10, // y
         600, // w
     )
 END
@@ -679,6 +679,25 @@ FN FwInitializeGui ()
     FwInitializeVideoConsole ()
 END
 
+FwVideoConsoleX : UWORD
+FwVideoConsoleY : UWORD
+
+FwCursorX : UINT
+FwCursorY : UINT
+
+FwVcEscape : UBYTE
+
+// FORWARD
+EXTERN FN (FwCioWriteF) FwVideoConsoleWrite (
+    IN byte : UWORD,
+)
+
+#SECTION "text"
+PUBLIC FwVideoConsoleCioBlock : FwCioBlock = {
+    [Write] = &FwVideoConsoleWrite,
+    [Read] = NULLPTR,
+}
+
 FN FwInitializeVideoConsole ()
 
     // Draw the background.
@@ -697,5 +716,187 @@ FN FwInitializeVideoConsole ()
         384, // h
     )
 
+    FwVideoConsoleX = x
+    FwVideoConsoleY = y
 
+    FwCurrentCioOutputBlock = &FwVideoConsoleCioBlock
+    FwCurrentCioInputBlock = &FwKeyboardCioBlock
+END
+
+FN FwVideoConsoleScroll ()
+
+    // Just copy the lines up.
+
+    fb := &FwDeviceDatabase.Framebuffer
+
+    topleftptr : ^UBYTE =
+        fb^.Address + (FwVideoConsoleY * fb^.Width) + FwVideoConsoleX
+
+    nextlineptr := topleftptr + fb^.Width * 16
+    tptr := topleftptr
+
+    i := 0
+
+    WHILE i < 16 * 23 DO
+        RtlCopyBytes (
+            tptr, // dest
+            nextlineptr, // src
+            80 * 8, // sz
+        )
+
+        i += 1
+        tptr += fb^.Width
+        nextlineptr += fb^.Width
+    END
+
+    // Now clear the bottom line.
+
+    nextlineptr = topleftptr + fb^.Width * 23 * 16
+
+    i = 0
+
+    WHILE i < 16 DO
+        RtlFillMemoryWithUlong (
+            nextlineptr, // dest
+            80 * 8, // size
+            0xFFFFFFFF, // ulong
+        )
+
+        i += 1
+        nextlineptr += fb^.Width
+    END
+END
+
+FN (FwCioWriteF) FwVideoConsoleWrite (
+    IN byte : UWORD,
+)
+
+    // Write a byte to the video console.
+
+    IF FwVcEscape THEN
+        IF byte == '[' THEN
+            LEAVE
+        END
+
+        IF byte >= '0' AND byte <= '9' THEN
+            LEAVE
+        END
+
+        IF byte == 'm' THEN
+            FwVcEscape = FALSE
+
+            LEAVE
+        END
+
+        IF byte == 'J' THEN
+            FwCursorX = 0
+            FwCursorY = 0
+
+            FvDrawFilledRectangle (
+                0xFF, // color
+                FwVideoConsoleX, // x
+                FwVideoConsoleY, // y
+                80 * 8, // w
+                24 * 16, // h
+            )
+
+            FwVcEscape = FALSE
+
+            LEAVE
+        END
+
+        IF byte == 'K' THEN
+            FvDrawFilledRectangle (
+                0xFF, // color
+                FwVideoConsoleX, // x
+                FwVideoConsoleY + FwCursorY * 16, // y
+                80 * 8, // w
+                16, // h
+            )
+
+            FwVcEscape = FALSE
+
+            LEAVE
+        END
+
+        IF byte == 'H' THEN
+            FwVcEscape = FALSE
+
+            LEAVE
+        END
+
+        LEAVE
+    END
+
+    IF byte == '\[' THEN
+        FwVcEscape = TRUE
+
+        LEAVE
+    END
+
+    IF byte == '\n' THEN
+        FwCursorY += 1
+        FwCursorX = 0
+
+        IF FwCursorY >= 24 THEN
+            FwCursorY = 23
+
+            FwVideoConsoleScroll ()
+        END
+
+        LEAVE
+    END
+
+    FvDrawFilledRectangle (
+        0xFF, // color
+        FwVideoConsoleX + FwCursorX * 8, // x
+        FwVideoConsoleY + FwCursorY * 16, // y
+        8, // w
+        16, // h
+    )
+
+    IF byte == '\r' THEN
+        FwCursorX = 0
+
+        LEAVE
+    END
+
+    IF byte == '\b' THEN
+        IF FwCursorX THEN
+            FwCursorX -= 1
+
+        ELSEIF FwCursorY THEN
+            FwCursorY -= 1
+            FwCursorX = 23
+        END
+
+    ELSE
+        FvDrawCharacter (
+            0x00, // color
+            byte, // c
+            FwVideoConsoleX + FwCursorX * 8, // x
+            FwVideoConsoleY + FwCursorY * 16, // y
+        )
+
+        FwCursorX += 1
+
+        IF FwCursorX >= 80 THEN
+            FwCursorX = 0
+            FwCursorY += 1
+
+            IF FwCursorY >= 24 THEN
+                FwCursorY = 23
+
+                FwVideoConsoleScroll ()
+            END
+        END
+    END
+
+    FvDrawFilledRectangle (
+        0x00, // color
+        FwVideoConsoleX + FwCursorX * 8, // x
+        FwVideoConsoleY + FwCursorY * 16, // y
+        8, // w
+        16, // h
+    )
 END
