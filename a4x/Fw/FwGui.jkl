@@ -9,9 +9,14 @@
 FwGuiFont:
     .static PC.8x16.hcf
 
+FwLogoBmp:
+    .static xrcomputer.rle
+    .di 0
+
 ]
 
 EXTERN FwGuiFont : UBYTE
+EXTERN FwLogoBmp : UBYTE
 
 STRUCT FwHcfHeader
     Magic : ULONG,
@@ -341,6 +346,57 @@ FN FvDrawShadowBox (
     )
 END
 
+FN FvDrawRleImage (
+    IN bmp : ^UBYTE,
+    IN x : UWORD,
+    IN y : UWORD,
+    IN w : UWORD,
+)
+
+    fb := &FwDeviceDatabase.Framebuffer
+
+    col := 0
+    ptr : ^UBYTE = fb^.Address + (y * fb^.Width) + x
+    mod := fb^.Width - w
+
+    WHILE TRUE DO
+        count := bmp^ | ((bmp + 1)^ << 8)
+        color := (bmp + 2)^
+        ulong := (color << 24) | (color << 16) | (color << 8) | color
+
+        IF NOT count THEN
+            BREAK
+        END
+
+        WHILE col + count >= w DO
+            // Do a full row.
+
+            RtlFillMemoryWithUlong (
+                ptr, // dest
+                w - col, // count
+                ulong, // ulong
+            )
+
+            ptr += w - col + mod
+            count -= w - col
+            col = 0
+        END
+
+        IF count THEN
+            RtlFillMemoryWithUlong (
+                ptr, // dest
+                count, // count
+                ulong, // ulong
+            )
+
+            ptr += count
+            col += count
+        END
+
+        bmp += 3
+    END
+END
+
 FN FwDrawBackground ()
 
     // Clear screen to white.
@@ -349,19 +405,11 @@ FN FwDrawBackground ()
 
     // Draw identifying text.
 
-    textbuf : UBYTE[64]
-
-    RtlFormat (
-        &textbuf[0], // dest
-        64, // bufsize
-        "a4x Firmware for %s", // fmt
-        FwMachineTypeString[FwDeviceDatabase.MachineType],
-    )
-
-    FvDrawStringCentered (
-        &textbuf[0], // string
-        0x00, // color
-        5, // y
+    FvDrawRleImage (
+        &FwLogoBmp, // bmp
+        FwDeviceDatabase.Framebuffer.Width / 2 - 300, // x
+        20, // y
+        600, // w
     )
 END
 
@@ -423,7 +471,7 @@ FN FwDrawTile (
     y := FwBootPickerY + (row * TILE_HEIGHT)
 
     FwBlitSplash (
-        2, // color
+        0x00, // color
         &bootable^.BootInfo^.Badge[0], // bmp
         x + 28, // x
         y + 10, // y
@@ -628,7 +676,7 @@ FN FwInitializeGui ()
 
     // Initialize the screen to display the video console.
 
-    // FwInitializeVideoConsole ()
+    FwInitializeVideoConsole ()
 END
 
 FN FwInitializeVideoConsole ()
