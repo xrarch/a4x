@@ -355,11 +355,9 @@ FwCommandTable : FwCommand[] = {
         [Help] = "Clear the console.",
     },
 
-    // Sentinel
+    // Sentinel.
 
-    {
-        [Name] = NULLPTR,
-    },
+    {},
 }
 
 FN FwGetString (
