@@ -216,13 +216,8 @@ FN (FwCommandF) FwCommandBoot ()
         LEAVE
     END
 
-    diskid : UWORD
-    partid : UWORD
-
     part := FwGetPartitionByName (
         &name[0], // name
-        OUT diskid, // diskid
-        OUT partid, // partid
     )
 
     IF NOT part THEN
@@ -233,13 +228,13 @@ FN (FwCommandF) FwCommandBoot ()
 
     IF NOT part^.BootInfo THEN
         RtlPrint ( "No operating system installed on dks%ds%d.\n",
-            diskid, partid )
+            part^.Id, part^.PartitionId )
 
         LEAVE
     END
 
     RtlPrint ( "Booting dks%ds%d '%s'\n",
-        diskid, partid, &part^.BootInfo^.OsName[0] )
+        part^.Id, part^.PartitionId, &part^.BootInfo^.OsName[0] )
 
     FwBootPartition ( part )
 END

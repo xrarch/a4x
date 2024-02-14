@@ -4,6 +4,603 @@
 
 #INCLUDE "<inc>/a4x.hjk"
 
+#ASM [
+
+FwGuiFont:
+    .static PC.8x16.hcf
+
+]
+
+EXTERN FwGuiFont : UBYTE
+
+STRUCT FwHcfHeader
+    Magic : ULONG,
+    Width : ULONG,
+    Height : ULONG,
+    Flags : ULONG,
+    FontName : UBYTE[16],
+    Reserved : UBYTE[16],
+END
+
+FwFramebufferSize : ULONG
+
+FN FvDrawCharacter (
+    IN color : UBYTE,
+    IN c : UBYTE,
+    IN x : ULONG,
+    IN y : ULONG,
+)
+
+    mod := FwDeviceDatabase.Framebuffer.Width
+    dest : ^UBYTE = FwDeviceDatabase.Framebuffer.Address
+
+    dest += (y * mod) + x
+
+    mod -= 8
+
+    bmp := &FwGuiFont + SIZEOF FwHcfHeader + 16 * c
+
+    w := 8
+    h := 16
+
+    WHILE h DO
+        left := w >> 3
+
+        WHILE left DO
+            byte := bmp^
+
+            IF byte THEN
+                IF byte & 128 THEN
+                    dest[0] = color
+                END
+
+                IF byte & 64 THEN
+                    dest[1] = color
+                END
+
+                IF byte & 32 THEN
+                    dest[2] = color
+                END
+
+                IF byte & 16 THEN
+                    dest[3] = color
+                END
+
+                IF byte & 8 THEN
+                    dest[4] = color
+                END
+
+                IF byte & 4 THEN
+                    dest[5] = color
+                END
+
+                IF byte & 2 THEN
+                    dest[6] = color
+                END
+
+                IF byte & 1 THEN
+                    dest[7] = color
+                END
+            END
+
+            left -= 1
+            bmp += 1
+            dest += 8
+        END
+
+        dest += mod
+        h -= 1
+    END
+END
+
+FN FvDrawString (
+    IN string : ^UBYTE,
+    IN color : UBYTE,
+    IN x : UWORD,
+    IN y : UWORD,
+    IN w : UWORD,
+)
+
+    // Convert wrap width to character count.
+
+    w >>= 3
+    left := w
+    curx := x
+
+    WHILE string^ DO
+        IF string^ == '\n' OR NOT left THEN
+            y += 16
+            left = w
+            curx = x
+        END
+
+        IF string^ != '\n' THEN
+            FvDrawCharacter (
+                color, // color
+                string^, // character
+                curx, // x
+                y, // y
+            )
+
+            left -= 1
+            curx += 8
+        END
+
+        string += 1
+    END
+END
+
+FN FvDrawStringCentered (
+    IN string : ^UBYTE,
+    IN color : UBYTE,
+    IN y : UWORD,
+)
+
+    x := FwDeviceDatabase.Framebuffer.Width / 2
+
+    len := 0
+
+    s := string
+
+    WHILE s^ AND s^ != '\n' DO
+        s += 1
+        len += 1
+    END
+
+    x -= (len * 8) / 2
+
+    FvDrawString (
+        string, // string
+        color, // color
+        x, // x
+        y, // y
+        -1, // w
+    )
+END
+
+FN FvClearScreen (
+    IN color : UBYTE,
+)
+
+    ulong := (color << 24) | (color << 16) | (color << 8) | color
+
+    RtlFillMemoryWithUlong (
+        FwDeviceDatabase.Framebuffer.Address, // dest
+        FwFramebufferSize, // size
+        ulong, // ulong
+    )
+END
+
+FN FvDrawFilledRectangle (
+    IN color : UBYTE,
+    IN x : UWORD,
+    IN y : UWORD,
+    IN w : UWORD,
+    IN h : UWORD,
+)
+
+    // Clip the rectangle to framebuffer boundaries.
+
+    fb := &FwDeviceDatabase.Framebuffer
+
+    IF x >= fb^.Width THEN
+        LEAVE
+    END
+
+    IF y >= fb^.Height THEN
+        LEAVE
+    END
+
+    IF x + w > fb^.Width THEN
+        w = fb^.Width - x
+    END
+
+    IF y + h > fb^.Height THEN
+        h = fb^.Height - y
+    END
+
+    ptr := fb^.Address + (y * fb^.Width) + x
+    ulong := (color << 24) | (color << 16) | (color << 8) | color
+
+    WHILE h DO
+        RtlFillMemoryWithUlong (
+            ptr, // dest
+            w, // size
+            ulong, // ulong
+        )
+
+        ptr += fb^.Width
+        h -= 1
+    END
+END
+
+FN FvDrawEmptyRectangle (
+    IN color : UBYTE,
+    IN x : UWORD,
+    IN y : UWORD,
+    IN w : UWORD,
+    IN h : UWORD,
+)
+
+    // Clip the rectangle to framebuffer boundaries.
+
+    fb := &FwDeviceDatabase.Framebuffer
+
+    IF x >= fb^.Width THEN
+        LEAVE
+    END
+
+    IF y >= fb^.Height THEN
+        LEAVE
+    END
+
+    rightedge := TRUE
+    bottomedge := TRUE
+
+    IF x + w > fb^.Width THEN
+        w = fb^.Width - x
+
+        rightedge = FALSE
+    END
+
+    IF y + h > fb^.Height THEN
+        h = fb^.Height - y
+
+        bottomedge = FALSE
+    END
+
+    topleftptr : ^UBYTE = fb^.Address + (y * fb^.Width) + x
+    ulong := (color << 24) | (color << 16) | (color << 8) | color
+
+    // Draw the top edge.
+
+    RtlFillMemoryWithUlong (
+        topleftptr, // dest
+        w, // size
+        ulong, // ulong
+    )
+
+    // Draw the bottom edge.
+
+    IF bottomedge THEN
+        RtlFillMemoryWithUlong (
+            topleftptr + (fb^.Width * (h - 1)), // dest
+            w, // size
+            ulong, // ulong
+        )
+    END
+
+    // Draw the left edge.
+
+    i := h
+    edgeptr := topleftptr
+
+    WHILE i DO
+        edgeptr^ = color
+
+        i -= 1
+        edgeptr += fb^.Width
+    END
+
+    // Draw the right edge.
+
+    IF w > 1 AND rightedge THEN
+        edgeptr = topleftptr + w - 1
+        i = h
+
+        WHILE i DO
+            edgeptr^ = color
+
+            i -= 1
+            edgeptr += fb^.Width
+        END
+    END
+END
+
+#DEFINE FV_SHADOW_WIDTH 5
+#DEFINE FV_SHADOW_MARGIN 10
+
+FN FvDrawShadowBox (
+    IN x : UWORD,
+    IN y : UWORD,
+    IN w : UWORD,
+    IN h : UWORD,
+)
+
+    // Draw a shadowed box GUI element.
+    // Note that the width and height do not include the shadow.
+
+    // Draw the central box.
+
+    FvDrawEmptyRectangle (
+        0x00, // color
+        x, // x
+        y, // y
+        w, // w
+        h, // h
+    )
+
+    // Draw the bottom part of the shadow.
+
+    FvDrawFilledRectangle (
+        0x00, // color
+        x + FV_SHADOW_MARGIN, // x
+        y + h + 1, // y
+        w - FV_SHADOW_MARGIN + FV_SHADOW_WIDTH, // w
+        FV_SHADOW_WIDTH, // h
+    )
+
+    // Draw the right part of the shadow.
+
+    FvDrawFilledRectangle (
+        0x00, // color
+        x + w + 1, // x
+        y + FV_SHADOW_MARGIN, // y
+        FV_SHADOW_WIDTH, // w
+        h - FV_SHADOW_MARGIN + FV_SHADOW_WIDTH + 1, // h
+    )
+END
+
+FN FwDrawBackground ()
+
+    // Clear screen to white.
+
+    FvClearScreen ( 0xFF )
+
+    // Draw identifying text.
+
+    textbuf : UBYTE[64]
+
+    RtlFormat (
+        &textbuf[0], // dest
+        64, // bufsize
+        "a4x Firmware for %s", // fmt
+        FwMachineTypeString[FwDeviceDatabase.MachineType],
+    )
+
+    FvDrawStringCentered (
+        &textbuf[0], // string
+        0x00, // color
+        5, // y
+    )
+END
+
+#DEFINE TILE_WIDTH 120
+#DEFINE TILE_HEIGHT 128
+
+FwBootPickerX : ULONG
+FwBootPickerY : ULONG
+FwBootPickerIndex : ULONG
+
+FN FwBlitSplash (
+    IN color : UBYTE,
+    IN bmp : ^UBYTE,
+    IN x : UWORD,
+    IN y : UWORD,
+)
+
+    fb := &FwDeviceDatabase.Framebuffer
+
+    h := 64
+    mod := fb^.Width - 64
+    ptr : ^UBYTE = fb^.Address + (y * fb^.Width) + x
+
+    WHILE h DO
+        i := 8
+
+        WHILE i DO
+            j := 1
+
+            WHILE j < 256 DO
+                IF bmp^ & j THEN
+                    ptr^ = color
+                END
+
+                ptr += 1
+                j <<= 1
+            END
+
+            bmp += 1
+            i -= 1
+        END
+
+        ptr += mod
+        h -= 1
+    END
+END
+
+FN FwDrawTile (
+    IN index : UWORD,
+    IN selected : UBYTE,
+)
+
+    bootable := FwBootableTable[index]
+
+    col := index % 4
+    row := index / 4
+
+    x := FwBootPickerX + (col * TILE_WIDTH)
+    y := FwBootPickerY + (row * TILE_HEIGHT)
+
+    FwBlitSplash (
+        2, // color
+        &bootable^.BootInfo^.Badge[0], // bmp
+        x + 28, // x
+        y + 10, // y
+    )
+
+    osname := &bootable^.BootInfo^.OsName[0]
+
+    FvDrawString (
+        osname, // string
+        0x00, // color
+        x + TILE_WIDTH / 2 - (RtlMeasureString ( osname ) * 8) / 2, // x
+        y + 82, // y
+        -1, // w
+    )
+
+    textbuf : UBYTE[64]
+
+    RtlFormat (
+        &textbuf[0], // dest
+        64, // bufsize
+        "dks%ds%d", // fmt
+        bootable^.Id,
+        bootable^.PartitionId,
+    )
+
+    FvDrawString (
+        &textbuf[0], // string
+        0x00, // color
+        x + TILE_WIDTH / 2 - (RtlMeasureString ( &textbuf[0] ) * 8) / 2, // x
+        y + 98, // y
+        -1, // w
+    )
+
+    IF selected THEN
+        FvDrawEmptyRectangle (
+            0x00, // color
+            x + 2, // x
+            y + 2, // y
+            TILE_WIDTH - 4, // w
+            TILE_HEIGHT - 4, // h
+        )
+
+    ELSE
+        FvDrawEmptyRectangle (
+            0xFF, // color
+            x + 2, // x
+            y + 2, // y
+            TILE_WIDTH - 4, // w
+            TILE_HEIGHT - 4, // h
+        )
+    END
+END
+
+FN FwBootPicker ()
+
+    // Draw a boot picker on the screen.
+
+    IF FwDeviceDatabase.BootableCount < 2 THEN
+        // Zero or only one bootable device. Don't bother.
+
+        LEAVE
+    END
+
+    IF FwDeviceDatabase.BootableCount > 12 THEN
+        LEAVE
+    END
+
+    // Draw the firmware background.
+
+    FwDrawBackground ()
+
+    // Figure out rows and columns of the boot picker such that there are 4
+    // bootable devices on each row.
+
+    rows := (FwDeviceDatabase.BootableCount + 3) / 4
+    cols : UWORD
+
+    IF rows == 1 THEN
+        cols = FwDeviceDatabase.BootableCount % 4
+    
+    ELSE
+        cols = 4
+    END
+
+    boxwidth := cols * TILE_WIDTH
+    boxheight := rows * TILE_HEIGHT
+
+    FwBootPickerX = FwDeviceDatabase.Framebuffer.Width / 2 - boxwidth / 2
+    FwBootPickerY = FwDeviceDatabase.Framebuffer.Height / 2 - boxheight / 2
+
+    FvDrawShadowBox (
+        FwBootPickerX, // x
+        FwBootPickerY, // y
+        boxwidth, // w
+        boxheight, // h
+    )
+
+    FvDrawStringCentered (
+        "Use left and right arrow keys to select a
+bootable partition. Strike enter to boot.
+Strike ESC to enter the command monitor.", // string
+        0x00, // color
+        FwBootPickerY - 68, // y
+    )
+
+    // Draw the tiles.
+
+    i := 0
+
+    WHILE i < FwDeviceDatabase.BootableCount DO
+        FwDrawTile (
+            i, // index
+            i == 0, // selected
+        )
+
+        i += 1
+    END
+
+    WHILE TRUE DO
+        scan := FwKeyboardReadScancode ()
+
+        IF scan == -1 THEN
+            CONTINUE
+        END
+
+        IF scan == 53 THEN
+            // Escape.
+
+            BREAK
+
+        ELSEIF scan == 54 THEN
+            // Left arrow.
+
+            IF FwBootPickerIndex != 0 THEN
+                FwDrawTile (
+                    FwBootPickerIndex, // index
+                    FALSE, // selected
+                )
+
+                FwBootPickerIndex -= 1
+
+                FwDrawTile (
+                    FwBootPickerIndex, // index
+                    TRUE, // selected
+                )
+            END
+
+        ELSEIF scan == 55 THEN
+            // Right arrow.
+
+            IF FwBootPickerIndex != FwDeviceDatabase.BootableCount - 1 THEN
+                FwDrawTile (
+                    FwBootPickerIndex, // index
+                    FALSE, // selected
+                )
+
+                FwBootPickerIndex += 1
+
+                FwDrawTile (
+                    FwBootPickerIndex, // index
+                    TRUE, // selected
+                )
+            END
+
+        ELSEIF scan == 50 THEN
+            // Return.
+
+            FwSelectedBootPartition = FwBootableTable[FwBootPickerIndex]
+
+            BREAK
+        END
+    END
+END
+
+// FORWARD
+EXTERN FN FwInitializeVideoConsole ()
+
 FN FwInitializeGui ()
 
     // Check for a framebuffer and keyboard.
@@ -20,7 +617,37 @@ FN FwInitializeGui ()
         LEAVE
     END
 
+    // Initialize some "cached" parameters.
+
+    FwFramebufferSize = FwDeviceDatabase.Framebuffer.Width *
+        FwDeviceDatabase.Framebuffer.Height
+
+    // Display the boot picker.
+
+    FwBootPicker ()
+
     // Initialize the screen to display the video console.
 
-    // Switch character I/O to the keyboard and video console.
+    // FwInitializeVideoConsole ()
+END
+
+FN FwInitializeVideoConsole ()
+
+    // Draw the background.
+
+    FwDrawBackground ()
+
+    // Draw the shadow box in the center of the screen.
+
+    x := FwDeviceDatabase.Framebuffer.Width / 2 - 320
+    y := FwDeviceDatabase.Framebuffer.Height / 2 - 192
+
+    FvDrawShadowBox (
+        x, // x
+        y, // y
+        640, // w
+        384, // h
+    )
+
+
 END

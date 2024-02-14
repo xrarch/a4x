@@ -42,6 +42,30 @@ FwKeyboardLayoutShift : UBYTE[50] = {
     '?', '>', '"', '<', '~'
 }
 
+FN FwKeyboardReadScancode () : UWORD
+
+    // Read a scancode from the keyboard.
+    // Non-blocking. Return -1 if none available.
+
+    amtsu := CAST IO_AMTSU_BASE TO ^IoAmtsu
+
+    id := FwDeviceDatabase.Keyboard.Id
+
+    amtsu^.Select = id
+    BARRIER
+
+    amtsu^.Cmd = IO_KEYBOARD_READ
+    BARRIER
+
+    PROBE code := amtsu^.Data0
+
+    IF code == 0xFFFF THEN
+        RETURN -1
+    END
+
+    RETURN code
+END
+
 FwKeyboardCtrlDown : UBYTE
 FwKeyboardShiftDown : UBYTE
 

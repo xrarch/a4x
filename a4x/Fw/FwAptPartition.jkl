@@ -4,9 +4,10 @@
 
 #INCLUDE "<inc>/a4x.hjk"
 
+PUBLIC FwBootableTable : ^FwDiskPartitionInfo[FW_DISK_MAX * FW_PARTITION_MAX]
+
 FN FwCheckBootable (
     IN partition : ^FwDiskPartitionInfo,
-    IN partitionid : ULONG,
 )
 
     // Check if the partition is bootable.
@@ -22,7 +23,7 @@ FN FwCheckBootable (
         1, // count
     ) THEN
         RtlPrint ( "dks%ds%d: Failed to read OS record\n",
-            partition^.Id, partitionid )
+            partition^.Id, partition^.PartitionId )
 
         LEAVE
     END
@@ -61,7 +62,7 @@ FN FwCheckBootable (
         1, // count
     ) THEN
         RtlPrint ( "dks%ds%d: Failed to read OS badge\n",
-            partition^.Id, partitionid )
+            partition^.Id, partition^.PartitionId )
 
         LEAVE
     END
@@ -73,6 +74,10 @@ FN FwCheckBootable (
         badge, // src
         512, // size
     )
+
+    // Store the partition in the bootable table and increment the count.
+
+    FwBootableTable[FwDeviceDatabase.BootableCount] = partition
 
     FwDeviceDatabase.BootableCount += 1
 END
@@ -133,7 +138,7 @@ FN FwInitializeDiskPartitions (
     i := 0
     base := 4
 
-    WHILE i < FW_DISK_MAX DO
+    WHILE i < FW_PARTITION_MAX DO
         partinfo := &disk^.Partitions[i]
         blockpart := &bootblock^.Partitions[i]
 
@@ -149,6 +154,7 @@ FN FwInitializeDiskPartitions (
             partinfo^.BaseSector = base
             partinfo^.SectorCount = blockpart^.SectorCount
             partinfo^.Id = partition^.Id
+            partinfo^.PartitionId = i
 
             base += blockpart^.SectorCount
         END
@@ -167,10 +173,7 @@ FN FwInitializeDiskPartitions (
         partinfo := &disk^.Partitions[i]
 
         IF partinfo^.SectorCount THEN
-            FwCheckBootable (
-                partinfo, // partition
-                i, // partitionid
-            )
+            FwCheckBootable ( partinfo )
         END
 
         i += 1

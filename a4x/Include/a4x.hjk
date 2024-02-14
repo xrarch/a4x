@@ -94,8 +94,6 @@ EXTERN FN FwDiskNameToNumbers (
 
 EXTERN FN FwGetPartitionByName (
     IN name : ^UBYTE,
-    OUT diskid : UWORD,
-    OUT partid : UWORD,
 ) : ^FwDiskPartitionInfo
 
 EXTERN FN FwBootPartition (
@@ -107,6 +105,8 @@ EXTERN FN FwAutoBoot ()
 EXTERN FN FwPaginate () : UWORD
 
 EXTERN FN FwResetPagination ()
+
+EXTERN FN FwKeyboardReadScancode () : UWORD
 
 EXTERN FN FwxSweepDcache ()
 
@@ -130,6 +130,12 @@ FNPTR FwBusErrorF ()
 EXTERN FwBusErrorCallback : FwBusErrorF
 
 EXTERN FwInitializing : UBYTE
+
+EXTERN FwMachineTypeString : ^UBYTE[XR_TYPE_MAX]
+
+EXTERN FwSelectedBootPartition : ^FwDiskPartitionInfo
+
+EXTERN FwBootableTable : ^FwDiskPartitionInfo[FW_DISK_MAX * FW_PARTITION_MAX]
 
 FNPTR FwIpiF (
     IN context : ^VOID,

@@ -4,13 +4,15 @@
 
 #INCLUDE "<inc>/a4x.hjk"
 
-PUBLIC FwMachineTypeString : ^UBYTE[3] = {
+PUBLIC FwMachineTypeString : ^UBYTE[XR_TYPE_MAX] = {
     [XR_STATION] = "XR/station",
     [XR_MP] = "XR/MP",
     [XR_FRAME] = "XR/frame",
 }
 
-FN FwAutoBoot ()
+PUBLIC FwSelectedBootPartition : ^FwDiskPartitionInfo
+
+FN FwAutoSelectForBoot ()
 
     // If there's exactly one bootable device, we select that.
     // Otherwise, if there's a boot-dev specified in the NVRAM, we select that.
@@ -18,40 +20,10 @@ FN FwAutoBoot ()
 
     RtlPrint ( "Autoboot: " )
 
-    selectedpartition : ^FwDiskPartitionInfo = NULLPTR
-
-    diskid : UWORD
-    partid : UWORD
-
     IF FwDeviceDatabase.BootableCount == 1 THEN
         // Find it.
 
-        i := 0
-
-        WHILE i < FW_DISK_MAX DO
-            disk := &FwDeviceDatabase.Dks[i]
-
-            j := 0
-
-            WHILE j < FW_PARTITION_MAX DO
-                IF disk^.Partitions[j].BootInfo THEN
-                    diskid = i
-                    partid = j
-
-                    selectedpartition = &disk^.Partitions[j]
-
-                    BREAK
-                END
-
-                j += 1
-            END
-
-            IF selectedpartition THEN
-                BREAK
-            END
-
-            i += 1
-        END
+        FwSelectedBootPartition = FwBootableTable[0]
     
     ELSEIF FwDeviceDatabase.BootableCount THEN
         // Look at NVRAM.
@@ -66,12 +38,10 @@ FN FwAutoBoot ()
 
             part := FwGetPartitionByName (
                 &diskname[0], // buffer
-                OUT diskid, // diskid
-                OUT partid, // partid
             )
 
             IF part AND part^.BootInfo THEN
-                selectedpartition = part
+                FwSelectedBootPartition = part
 
             ELSE
                 RtlPrint ( "'%s' is unavailable. ", &diskname[0] )
@@ -79,14 +49,23 @@ FN FwAutoBoot ()
         END
     END
 
-    IF selectedpartition THEN
+    IF FwSelectedBootPartition THEN
         RtlPrint ( "dks%ds%d (%s)\n",
-            diskid, partid, &selectedpartition^.BootInfo^.OsName[0] )
-    
-        FwBootPartition ( selectedpartition )
+            FwSelectedBootPartition^.Id,
+            FwSelectedBootPartition^.PartitionId,
+            &FwSelectedBootPartition^.BootInfo^.OsName[0] )
+    END
+END
 
-    ELSE
+FN FwAutoBoot ()
+
+    FwAutoSelectForBoot ()
+
+    IF NOT FwSelectedBootPartition THEN
         RtlPrint ( "No selected boot device.\n" )
+    
+    ELSE
+        FwBootPartition ( FwSelectedBootPartition )
     END
 END
 
@@ -112,19 +91,33 @@ FN FwTextUserInterface ()
 
     FwPrintBanner ()
 
-    // Depending on the value of the auto-boot? nvram variable, we want to
-    // either go ahead and boot, or drop into the command monitor.
+    IF NOT FwSelectedBootPartition THEN
+        // Depending on the value of the auto-boot? nvram variable, we want to
+        // either go ahead and boot, or drop into the command monitor.
 
-    varcontents : UBYTE[8]
+        varcontents : UBYTE[8]
 
-    IF FwGetNvramVariableWithDefault (
-        "auto-boot?", // name
-        &varcontents[0], // buffer
-        "true", // default
-        8, // bufsize
-    ) AND RtlCompareString ( &varcontents[0], "true" ) == 0 THEN
+        IF FwGetNvramVariableWithDefault (
+            "auto-boot?", // name
+            &varcontents[0], // buffer
+            "true", // default
+            8, // bufsize
+        ) AND RtlCompareString ( &varcontents[0], "true" ) == 0 THEN
 
-        FwAutoBoot ()
+            FwAutoSelectForBoot ()
+        END
+    
+    ELSE
+        RtlPrint ( "Booting dks%ds%d...\n",
+            FwSelectedBootPartition^.Id,
+            FwSelectedBootPartition^.PartitionId )
+    END
+
+    IF NOT FwSelectedBootPartition THEN
+        RtlPrint ( "No selected boot device.\n" )
+    
+    ELSE
+        FwBootPartition ( FwSelectedBootPartition )
     END
 
     FwCommandMonitor ()

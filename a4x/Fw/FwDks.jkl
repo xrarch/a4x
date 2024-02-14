@@ -65,6 +65,7 @@ FN FwProbeDks ()
             p8^.BaseSector = 0
             p8^.SectorCount = sectors
             p8^.Id = i
+            p8^.PartitionId = FW_PARTITION_MAX
 
         ELSE
             RtlPrint ( "%8s ", "ABSENT" )
@@ -272,12 +273,13 @@ END
 
 FN FwGetPartitionByName (
     IN name : ^UBYTE,
-    OUT diskid : UWORD,
-    OUT partid : UWORD,
 ) : ^FwDiskPartitionInfo
 
     // Get a pointer to a partition info by name. If the partition doesn't
     // exist, return a null pointer.
+
+    diskid : UWORD
+    partid : UWORD
 
     IF FwDiskNameToNumbers (
         name, // name
