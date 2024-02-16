@@ -867,7 +867,7 @@ FN (FwCioWriteF) FwVideoConsoleWrite (
 
         ELSEIF FwCursorY THEN
             FwCursorY -= 1
-            FwCursorX = 23
+            FwCursorX = 79
         END
 
     ELSE
