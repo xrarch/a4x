@@ -120,6 +120,11 @@ operating system and there is no a3x image.\n" )
     FwxJumpToA3X ( entrypoint )
 END
 
+FNPTR FwBootstrapEntrypoint (
+    IN devicedatabase : ^FwDeviceDatabaseRecord,
+    IN apitable : ^FwApiTableRecord,
+) : UWORD
+
 FN FwBootPartition (
     IN partition : ^FwDiskPartitionInfo,
 )
@@ -135,4 +140,37 @@ FN FwBootPartition (
 
         LEAVE
     END
+
+    // This is a "new" operating system (disregard that word if you're reading
+    // this in 20 years). Load the bootstrap sectors starting at 0x3000.
+
+    buffer := CAST 0x3000 TO ^ULONG
+
+    IF NOT FwReadDisk (
+        partition, // partition
+        buffer, // buffer
+        bootinfo^.BootstrapSector, // sector
+        bootinfo^.BootstrapCount, // count
+    ) THEN
+        RtlPrint ( "dks%ds%d: Failed to read bootstrap program\n",
+            partition^.Id, partition^.PartitionId )
+
+        LEAVE
+    END
+
+    IF buffer^ != A4X_BOOTSTRAP_MAGIC THEN
+        RtlPrint ( "dks%ds%d: Bootstrap program is corrupted\n",
+            partition^.Id, partition^.PartitionId )
+
+        LEAVE
+    END
+
+    entry := CAST 0x3004 TO FwBootstrapEntrypoint
+
+    ret := entry (
+        &FwDeviceDatabase, // devicedatabase
+        &FwApiTable, // apitable
+    )
+
+    RtlPrint ( "Boot program returned %d\n", ret )
 END

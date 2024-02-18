@@ -547,12 +547,9 @@ FN FwBootPicker ()
     // bootable devices on each row.
 
     rows := (FwDeviceDatabase.BootableCount + 3) / 4
-    cols : UWORD
+    cols := FwDeviceDatabase.BootableCount % 4
 
-    IF rows == 1 THEN
-        cols = FwDeviceDatabase.BootableCount % 4
-    
-    ELSE
+    IF rows > 1 OR NOT cols THEN
         cols = 4
     END
 

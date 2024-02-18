@@ -127,9 +127,9 @@ FN FwExceptionVector (
     ELSE
         // Something bad happened.
 
-        FwCrash ( "exc=%d proc=%d tf=%p ba=%p epc=%p sp=%p",
+        RtlPrint ( "exc=%d proc=%d tf=%p ba=%p epc=%p sp=%p\n",
             ecause, procid, trapframe, badaddr, trapframe^.Epc, trapframe^.Sp )
 
-        WHILE TRUE DO END
+        FwCrash ( "Unexpected exception" )
     END
 END

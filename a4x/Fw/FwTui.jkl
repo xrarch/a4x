@@ -4,6 +4,7 @@
 
 #INCLUDE "<inc>/a4x.hjk"
 
+#SECTION "text"
 PUBLIC FwMachineTypeString : ^UBYTE[XR_TYPE_MAX] = {
     [XR_STATION] = "XR/station",
     [XR_MP] = "XR/MP",

@@ -94,7 +94,7 @@ FN FwProbeDks ()
     END
 END
 
-FN FwReadDisk (
+FN (FwApiReadDiskF) FwReadDisk (
     IN partition : ^FwDiskPartitionInfo,
     IN buffer : ^VOID,
     IN sector : ULONG,

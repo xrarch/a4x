@@ -23,7 +23,7 @@ FN FwCioEarlyInitialize ()
     FwCurrentCioInputBlock = &FwSerialCioBlock
 END
 
-FN FwCioPutCharacter (
+FN (FwApiPutCharacterF) FwCioPutCharacter (
     IN byte : UWORD,
 )
 
@@ -34,7 +34,7 @@ FN FwCioPutCharacter (
     FwCurrentCioOutputBlock^.Write ( byte )
 END
 
-FN FwCioGetCharacter () : UWORD
+FN (FwApiGetCharacterF) FwCioGetCharacter () : UWORD
 
     RETURN FwCurrentCioInputBlock^.Read ()
 END

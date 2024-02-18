@@ -40,6 +40,13 @@ FN FwCheckBootable (
         SIZEOF FwDiskBootInfo, // bytes
     ) TO ^FwDiskBootInfo
 
+    IF NOT bootinfo THEN
+        RtlPrint ( "dks%ds%d: Can't allocate boot info\n",
+            partition^.Id, partition^.PartitionId )
+
+        LEAVE
+    END
+
     // Copy stuff into it.
 
     RtlCopyString (

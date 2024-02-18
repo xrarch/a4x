@@ -3,7 +3,10 @@
 
 #DEFINE XR_ROM_START 0xFFFE0000
 
-#DEFINE A4X_SECTOR_BUFFER 0x2000
+#DEFINE A4X_SECTOR_BUFFER 0x3000
+#DEFINE A4X_END 0x3000
+
+#DEFINE A4X_BOOTSTRAP_MAGIC 0x676F646E
 
 #DEFINE FW_MONITOR_HEIGHT 24
 
@@ -18,17 +21,17 @@ STRUCT FwCioBlock
     Read : FwCioReadF,
 END
 
-EXTERN FN FwCioPutCharacter (
+EXTERN FN (FwApiPutCharacterF) FwCioPutCharacter (
     IN byte : UWORD,
 )
+
+EXTERN FN (FwApiGetCharacterF) FwCioGetCharacter () : UWORD
 
 EXTERN FN FwBumpAllocate (
     IN bytes : UWORD,
 ) : ^VOID
 
-EXTERN FN FwCioGetCharacter () : UWORD
-
-EXTERN FN FwReadDisk (
+EXTERN FN (FwApiReadDiskF) FwReadDisk (
     IN partition : ^FwDiskPartitionInfo,
     IN buffer : ^VOID,
     IN sector : ULONG,
@@ -136,6 +139,8 @@ EXTERN FwMachineTypeString : ^UBYTE[XR_TYPE_MAX]
 EXTERN FwSelectedBootPartition : ^FwDiskPartitionInfo
 
 EXTERN FwBootableTable : ^FwDiskPartitionInfo[FW_DISK_MAX * FW_PARTITION_MAX]
+
+EXTERN FwApiTable : FwApiTableRecord
 
 EXTERN FwCurrentCioOutputBlock : ^FwCioBlock
 EXTERN FwCurrentCioInputBlock : ^FwCioBlock

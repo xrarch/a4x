@@ -33,6 +33,10 @@ FN FwBumpAllocate (
 
     ptr := FwBumpPtr
 
+    IF ptr + bytes > A4X_END THEN
+        RETURN NULLPTR
+    END
+
     FwBumpPtr += bytes
 
     RETURN CAST ptr TO ^VOID

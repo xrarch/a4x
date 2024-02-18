@@ -1,0 +1,11 @@
+//
+// Contains the firmware API table.
+//
+
+#INCLUDE "<inc>/a4x.hjk"
+
+PUBLIC FwApiTable : FwApiTableRecord = {
+    [PutCharacter] = &FwCioPutCharacter,
+    [GetCharacter] = &FwCioGetCharacter,
+    [ReadDisk] = &FwReadDisk,
+}

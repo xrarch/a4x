@@ -84,6 +84,21 @@ STRUCT FwDeviceDatabaseRecord
     MachineType : FwMachineType,
 END
 
-STRUCT FwInformationRecord
-    DeviceDatabase : ^FwDeviceDatabaseRecord,
+FNPTR FwApiPutCharacterF (
+    IN byte : UWORD,
+)
+
+FNPTR FwApiGetCharacterF () : UWORD
+
+FNPTR FwApiReadDiskF (
+    IN partition : ^FwDiskPartitionInfo,
+    IN buffer : ^VOID,
+    IN sector : ULONG,
+    IN count : ULONG,
+) : UWORD
+
+STRUCT FwApiTableRecord
+    PutCharacter : FwApiPutCharacterF,
+    GetCharacter : FwApiGetCharacterF,
+    ReadDisk : FwApiReadDiskF,
 END
