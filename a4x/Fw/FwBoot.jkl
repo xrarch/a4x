@@ -120,13 +120,6 @@ operating system and there is no a3x image.\n" )
     FwxJumpToA3X ( entrypoint )
 END
 
-FNPTR FwBootstrapEntrypoint (
-    IN devicedatabase : ^FwDeviceDatabaseRecord,
-    IN apitable : ^FwApiTableRecord,
-    IN bootpartition : ^FwDiskPartitionInfo,
-    IN args : ^UBYTE,
-) : UWORD
-
 FN FwBootPartition (
     IN partition : ^FwDiskPartitionInfo,
     IN args : ^UBYTE,

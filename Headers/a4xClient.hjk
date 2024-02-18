@@ -107,3 +107,10 @@ STRUCT FwApiTableRecord
     ReadDisk : FwApiReadDiskF,
     PutString : FwApiPutStringF,
 END
+
+FNPTR FwBootstrapEntrypoint (
+    IN devicedatabase : ^FwDeviceDatabaseRecord,
+    IN apitable : ^FwApiTableRecord,
+    IN bootpartition : ^FwDiskPartitionInfo,
+    IN args : ^UBYTE,
+) : UWORD
