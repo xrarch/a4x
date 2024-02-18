@@ -97,8 +97,13 @@ FNPTR FwApiReadDiskF (
     IN count : ULONG,
 ) : UWORD
 
+FNPTR FwApiPutStringF (
+    IN str : ^UBYTE,
+)
+
 STRUCT FwApiTableRecord
     PutCharacter : FwApiPutCharacterF,
     GetCharacter : FwApiGetCharacterF,
     ReadDisk : FwApiReadDiskF,
+    PutString : FwApiPutStringF,
 END

@@ -4,8 +4,20 @@
 
 #INCLUDE "<inc>/a4x.hjk"
 
+FN (FwApiPutStringF) FwPutString (
+    IN str : ^UBYTE,
+)
+
+    WHILE str^ DO
+        FwCioPutCharacter ( str^ )
+
+        str += 1
+    END
+END
+
 PUBLIC FwApiTable : FwApiTableRecord = {
-    [PutCharacter] = &FwCioPutCharacter,
-    [GetCharacter] = &FwCioGetCharacter,
-    [ReadDisk] = &FwReadDisk,
+    [PutCharacter] = &FwCioPutCharacter, // +0
+    [GetCharacter] = &FwCioGetCharacter, // +4
+    [ReadDisk] = &FwReadDisk,            // +8
+    [PutString] = &FwPutString,          // +12
 }

@@ -113,6 +113,7 @@ EXTERN FN FwResetPagination ()
 EXTERN FN FwKeyboardReadScancode () : UWORD
 
 EXTERN FN FwxSweepDcache ()
+EXTERN FN FwxSweepIcache ()
 
 EXTERN FN FwxHalt ()
 

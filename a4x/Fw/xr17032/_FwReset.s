@@ -151,6 +151,12 @@ FwxSweepDcache:
     mtcr dcachectrl, t0
     ret
 
+FwxSweepIcache:
+.global FwxSweepIcache
+    li   t0, 3
+    mtcr icachectrl, t0
+    ret
+
 FwxJumpToA3X:
 .global FwxJumpToA3X
     mtcr rs, zero

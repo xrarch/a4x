@@ -168,6 +168,10 @@ FN FwBootPartition (
         LEAVE
     END
 
+    // We modified the instruction stream, so sweep the icache.
+
+    FwxSweepIcache ()
+
     entry := CAST 0x3004 TO FwBootstrapEntrypoint
 
     ret := entry (
