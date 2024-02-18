@@ -132,7 +132,7 @@ FN FwProbeRam ()
             // Skip the low 32KB, since that's where firmware lives and we will
             // corrupt ourselves if we write there.
 
-            probebase += 32 * 1024
+            probebase += A4X_END
         END
 
         size := FwProbeRamSlot (
@@ -141,7 +141,7 @@ FN FwProbeRam ()
         )
 
         IF i == 0 THEN
-            size += 32 * 1024
+            size += A4X_END
         END
 
         FwDeviceDatabase.Ram[i].PageFrameCount = size/4096

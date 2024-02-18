@@ -230,7 +230,6 @@ FN FwDiskNameToNumbers (
         8, // bufsize
         OUT diskid, // num
     ) THEN
-
         RETURN FALSE
     END
 
@@ -260,7 +259,6 @@ FN FwDiskNameToNumbers (
         8, // bufsize
         OUT partid, // num
     ) THEN
-
         RETURN FALSE
     END
 
@@ -286,7 +284,6 @@ FN FwGetPartitionByName (
         OUT diskid, // diskid
         OUT partid, // partid
     ) THEN
-
         disk := &FwDeviceDatabase.Dks[diskid]
         part := &disk^.Partitions[partid]
 
