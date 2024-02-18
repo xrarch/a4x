@@ -123,10 +123,13 @@ END
 FNPTR FwBootstrapEntrypoint (
     IN devicedatabase : ^FwDeviceDatabaseRecord,
     IN apitable : ^FwApiTableRecord,
+    IN bootpartition : ^FwDiskPartitionInfo,
+    IN args : ^UBYTE,
 ) : UWORD
 
 FN FwBootPartition (
     IN partition : ^FwDiskPartitionInfo,
+    IN args : ^UBYTE,
 )
 
     // Load the bootstrap software from the provided partition, and jump to it.
@@ -170,6 +173,8 @@ FN FwBootPartition (
     ret := entry (
         &FwDeviceDatabase, // devicedatabase
         &FwApiTable, // apitable
+        partition, // bootpartition
+        args, // args
     )
 
     RtlPrint ( "Boot program returned %d\n", ret )

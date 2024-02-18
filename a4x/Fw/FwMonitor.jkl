@@ -211,7 +211,7 @@ FN (FwCommandF) FwCommandBoot ()
         8, // bufsize
     ) THEN
 
-        RtlPrint ( "Usage: boot [device (dksNsN)]\n" )
+        RtlPrint ( "Usage: boot [device (dksNsN)] [args ...]\n" )
 
         LEAVE
     END
@@ -236,7 +236,10 @@ FN (FwCommandF) FwCommandBoot ()
     RtlPrint ( "Booting dks%ds%d '%s'\n",
         part^.Id, part^.PartitionId, &part^.BootInfo^.OsName[0] )
 
-    FwBootPartition ( part )
+    FwBootPartition (
+        part, // partition
+        FwNextTokenPointer, // args
+    )
 END
 
 FN (FwCommandF) FwCommandListDisk ()
@@ -337,7 +340,8 @@ FwCommandTable : FwCommand[] = {
     {
         [Name] = "boot",
         [Function] = &FwCommandBoot,
-        [Help] = "[device (dksNsN)] Boot from the specified partition.",
+        [Help] =
+            "[device (dksNsN)] [args ...] Boot from the specified partition.",
     },
     {
         [Name] = "listdisk",

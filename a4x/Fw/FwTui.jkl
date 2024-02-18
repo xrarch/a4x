@@ -13,6 +13,8 @@ PUBLIC FwMachineTypeString : ^UBYTE[XR_TYPE_MAX] = {
 
 PUBLIC FwSelectedBootPartition : ^FwDiskPartitionInfo
 
+FwBootArgumentBuffer : UBYTE[256]
+
 FN FwAutoSelectForBoot ()
 
     // If there's exactly one bootable device, we select that.
@@ -66,7 +68,18 @@ FN FwAutoBoot ()
         RtlPrint ( "No selected boot device.\n" )
     
     ELSE
-        FwBootPartition ( FwSelectedBootPartition )
+        IF NOT FwGetNvramVariable (
+            "boot-args", // name
+            &FwBootArgumentBuffer[0], // buffer
+            256, // bufsize
+        ) THEN
+            FwBootArgumentBuffer[0] = 0
+        END
+
+        FwBootPartition (
+            FwSelectedBootPartition, // partition
+            &FwBootArgumentBuffer[0], // args
+        )
     END
 END
 
@@ -118,7 +131,18 @@ FN FwTextUserInterface ()
         RtlPrint ( "No selected boot device.\n" )
     
     ELSE
-        FwBootPartition ( FwSelectedBootPartition )
+        IF NOT FwGetNvramVariable (
+            "boot-args", // name
+            &FwBootArgumentBuffer[0], // buffer
+            256, // bufsize
+        ) THEN
+            FwBootArgumentBuffer[0] = 0
+        END
+
+        FwBootPartition (
+            FwSelectedBootPartition, // partition
+            &FwBootArgumentBuffer[0], // args
+        )
     END
 
     FwCommandMonitor ()

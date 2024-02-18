@@ -101,6 +101,7 @@ EXTERN FN FwGetPartitionByName (
 
 EXTERN FN FwBootPartition (
     IN partition : ^FwDiskPartitionInfo,
+    IN args : ^UBYTE,
 )
 
 EXTERN FN FwAutoBoot ()
