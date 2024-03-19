@@ -82,7 +82,8 @@ operating system and there is no a3x image.\n" )
     )
 
     // From now on we can't touch RAM because we're destroying it by loading a3x
-    // over it.
+    // over it. Note that we're currently executing out of ROM, and a3x misses
+    // our stack (which is in page frame zero).
 
     entrypoint := (CAST a3x +
         a3x^.SymbolTableOffset +
