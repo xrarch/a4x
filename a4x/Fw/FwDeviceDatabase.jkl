@@ -25,6 +25,7 @@ FN FwProbeProcessors ()
         lsic := &(CAST IO_LSIC_BASE TO ^IoLsicTable)^.Table[i]
 
         FwProbeCheck = 1
+        BARRIER
 
         // PROBE keyword stops this load from being optimized out.
 
@@ -83,6 +84,7 @@ FN FwProbeRamSlot (
     FwBusErrorCallback = &FwProbeBusError
 
     FwProbeCheck = 1
+    BARRIER
 
     // We start probing at the end of the page frame so that we make sure we
     // only see complete page frames.
@@ -91,6 +93,7 @@ FN FwProbeRamSlot (
 
     WHILE base < max DO
         base^ = 0xA5
+        BARRIER
 
         IF NOT FwProbeCheck THEN
             BREAK
