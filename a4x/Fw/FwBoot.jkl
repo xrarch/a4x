@@ -117,6 +117,9 @@ operating system and there is no a3x image.\n" )
         0, // ulong
     )
 
+    // Jump to the A3X entrypoint to load the operating system.
+    // This does not return.
+
     FwxJumpToA3X ( entrypoint )
 END
 
@@ -164,6 +167,8 @@ FN FwBootPartition (
     // We modified the instruction stream, so sweep the icache.
 
     FwxSweepIcache ()
+
+    // Now jump to the boot program's entrypoint.
 
     entry := CAST 0x3004 TO FwBootstrapEntrypoint
 
