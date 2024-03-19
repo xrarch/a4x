@@ -63,6 +63,9 @@ operating system and there is no a3x image.\n" )
         LEAVE
     END
 
+    // Set the instant-boot NVRAM variable. This directs a3x to "instantly" boot
+    // from the specified device once we jump to it.
+
     namebuf : UBYTE[16]
 
     RtlFormat (
@@ -117,7 +120,7 @@ operating system and there is no a3x image.\n" )
         0, // ulong
     )
 
-    // Jump to the A3X entrypoint to load the operating system.
+    // Jump to the a3x entrypoint to load the operating system.
     // This does not return.
 
     FwxJumpToA3X ( entrypoint )
