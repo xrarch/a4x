@@ -4,7 +4,7 @@ TARGET "a4x"
 	INCDIR "Include"
 	INCDIR "../Headers"
 
-	LIBDIR "../../newsdk/Rtl/Headers"
+	LIBDIR "<sdk>/Rtl/Headers"
 
 	SOURCES "Fw"
 	SOURCES "Fw/xr17032"
@@ -12,5 +12,5 @@ TARGET "a4x"
 	LINKOPT "-bin"
 	LINKOPT "-move:text=0xFFFE0000,data=0x1000,bss=@data"
 
-	LINK "../../newsdk/Rtl/build/xr17032/Rtl.lib"
+	LINK "<sdk>/Rtl/build/xr17032/Rtl.lib"
 END

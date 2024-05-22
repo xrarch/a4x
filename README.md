@@ -8,6 +8,8 @@ Boot firmware for the XR/station platform, written in xr17032 assembly and Jacka
 
 ## Building
 
-_These instructions are pending further work on the new SDK._
+Place the [new SDK](https://github.com/xrarch/newsdk) at `../newsdk` relative to this repository and build it. Then the following command, run from within this repository, should produce an a4x ROM at `./build/fre/a4x.rom`:
+
+`../newsdk/bin/xrbt.exe build.xrbt a4x`
 
 The ability to hot-switch to the legacy [a3x](https://github.com/xrarch/a3x) firmware can be added to an a4x ROM. The process for this is to build the old firmware, and look for a file called `firmware.bin` within its `./src/` subdirectory. Directly concatenate this file to the end of an a4x ROM to create a new ROM that can boot legacy operating systems.
