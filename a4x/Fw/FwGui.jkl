@@ -7,10 +7,10 @@
 #ASM [
 
 FwGuiFont:
-    .static PC.8x16.hcf
+    .incbin "../../PC.8x16.hcf"
 
 FwLogoBmp:
-    .static xrcomputer.rle
+    .incbin "../../xrcomputer.rle"
     .di 0
 
 ]
