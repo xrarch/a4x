@@ -74,6 +74,7 @@ STRUCT FwDeviceDatabaseRecord
     TotalRamBytes : ULONG,
     ProcessorCount : UBYTE,
     BootableCount : UBYTE,
+    Padding : UBYTE[2],
     Ram : FwRamRecord[FW_RAM_MAX],
     Dks : FwDksInfoRecord[FW_DISK_MAX],
     Amtsu : FwAmtsuInfoRecord[FW_AMTSU_MAX],
@@ -83,6 +84,11 @@ STRUCT FwDeviceDatabaseRecord
     Keyboard : FwKeyboardInfoRecord,
     MachineType : FwMachineType,
 END
+
+FNPTR FwKickProcessorCallbackF (
+    IN number : UWORD,
+    IN context : ^VOID,
+)
 
 FNPTR FwApiPutCharacterF (
     IN byte : UWORD,
@@ -99,6 +105,12 @@ FNPTR FwApiReadDiskF (
 
 FNPTR FwApiPutStringF (
     IN str : ^UBYTE,
+)
+
+FNPTR FwApiKickProcessorF (
+    IN number : UWORD,
+    IN context : ^VOID,
+    IN callback : FwKickProcessorCallbackF,
 )
 
 STRUCT FwApiTableRecord
