@@ -192,6 +192,8 @@ FN (FwApiReadDiskF) FwReadDisk (
     // main memory.
 
     FwxSweepDcache ()
+
+    RETURN TRUE
 END
 
 FN FwDiskNameToNumbers (
