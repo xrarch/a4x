@@ -171,7 +171,6 @@ FN FwInitializeDiskPartitions (
         END
 
         i += 1
-        blockpart += SIZEOF IoAptEntry
     END
 
     // Now check each partition for bootability.
