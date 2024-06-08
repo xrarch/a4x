@@ -154,6 +154,26 @@ FN FwInitializeDiskPartitions (
         blockpart := &bootblock^.Partitions[i]
 
         IF blockpart^.Status THEN
+            // Validate sizes.
+
+            IF base >= partition^.SectorCount THEN
+                RtlPrint ( "dks%ds%d: Partition begins beyond end of disk\n",
+                    partition^.Id, i )
+
+                i += 1
+
+                CONTINUE
+            END
+
+            IF base + blockpart^.SectorCount > partition^.SectorCount THEN
+                RtlPrint ( "dks%ds%d: Partition ends beyond end of disk\n",
+                    partition^.Id, i )
+
+                i += 1
+
+                CONTINUE
+            END
+
             // Copy the info into the device database.
 
             RtlCopyString (
