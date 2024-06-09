@@ -165,6 +165,15 @@ FN FwInitializeDiskPartitions (
                 CONTINUE
             END
 
+            IF blockpart^.SectorCount >= partition^.SectorCount THEN
+                RtlPrint ( "dks%ds%d: Partition size larger than disk\n",
+                    partition^.Id, i )
+
+                i += 1
+
+                CONTINUE
+            END
+
             IF base + blockpart^.SectorCount > partition^.SectorCount THEN
                 RtlPrint ( "dks%ds%d: Partition ends beyond end of disk\n",
                     partition^.Id, i )
