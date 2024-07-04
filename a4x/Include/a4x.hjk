@@ -158,7 +158,8 @@ EXTERN FwKeyboardCioBlock : FwCioBlock
 EXTERN FN FwSendIpi (
     IN targetid : ULONG,
     IN function : FwKickProcessorCallbackF,
-    IN context : ^VOID
+    IN context : ^VOID,
+    IN wait : UWORD,
 ) : UBYTE
 
 STRUCT FwIpiPacket

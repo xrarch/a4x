@@ -33,7 +33,8 @@ FwPendingPackets : ^FwIpiPacket[FW_PROCESSOR_MAX]
 FN FwSendIpi (
     IN targetid : ULONG,
     IN function : FwKickProcessorCallbackF,
-    IN context : ^VOID
+    IN context : ^VOID,
+    IN wait : UWORD,
 ) : UBYTE
 
     // Send an IPI packet to the specified processor.
@@ -56,22 +57,24 @@ FN FwSendIpi (
     lsic^.Pending0 = 0x00000002
     BARRIER
 
-    // Wait for packet.
+    IF wait THEN
+        // Wait for packet.
 
-    timeout := 50000000
+        timeout := 50000000
 
-    WHILE NOT packet.Acknowledged AND timeout DO
-        BARRIER
+        WHILE NOT packet.Acknowledged AND timeout DO
+            BARRIER
 
-        timeout -= 1
-    END
+            timeout -= 1
+        END
 
-    IF timeout == 0 THEN
-        // Count ran down. Timeout.
+        IF timeout == 0 THEN
+            // Count ran down. Timeout.
 
-        RtlPrint ( "Warning: IPI timeout on processor %d\n", targetid )
+            RtlPrint ( "Warning: IPI timeout on processor %d\n", targetid )
 
-        RETURN FALSE
+            RETURN FALSE
+        END
     END
 
     RETURN TRUE
@@ -114,5 +117,6 @@ FN (FwApiKickProcessorF) FwKickProcessor (
         number, // targetid
         callback, // function
         context, // context
+        FALSE, // wait
     )
 END
