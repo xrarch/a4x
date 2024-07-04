@@ -28,7 +28,7 @@ FN FwInitializeInterrupts (
     FwxEnableInterrupts ()
 END
 
-FwPendingPackets : ^FwIpiPacket[FW_PROCESSOR_MAX]
+FwPendingPackets : FwIpiPacket[FW_PROCESSOR_MAX]
 
 FN FwSendIpi (
     IN targetid : ULONG,
@@ -40,14 +40,11 @@ FN FwSendIpi (
     // Send an IPI packet to the specified processor.
     // Returns TRUE if successful, FALSE if timeout.
 
-    packet : FwIpiPacket
+    packet := &FwPendingPackets[targetid]
 
-    packet.Acknowledged = FALSE
-    packet.Function = function
-    packet.Context = context
-
-    FwPendingPackets[targetid] = &packet
-    BARRIER
+    packet^.Acknowledged = FALSE
+    packet^.Function = function
+    packet^.Context = context
 
     // Write the IPI interrupt into the LSIC interrupt pending register for the
     // target processor.
@@ -62,7 +59,7 @@ FN FwSendIpi (
 
         timeout := 50000000
 
-        WHILE NOT packet.Acknowledged AND timeout DO
+        WHILE NOT packet^.Acknowledged AND timeout DO
             BARRIER
 
             timeout -= 1
@@ -95,7 +92,7 @@ FN FwServiceIpi (
     lsic^.ClaimComplete = 1
     BARRIER
 
-    packet := FwPendingPackets[procid]
+    packet := &FwPendingPackets[procid]
 
     packet^.Function (
         procid, // number
