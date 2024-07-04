@@ -118,6 +118,7 @@ STRUCT FwApiTableRecord
     GetCharacter : FwApiGetCharacterF,
     ReadDisk : FwApiReadDiskF,
     PutString : FwApiPutStringF,
+    KickProcessor : FwApiKickProcessorF,
 END
 
 FNPTR FwBootstrapEntrypoint (

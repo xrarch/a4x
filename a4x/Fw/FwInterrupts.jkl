@@ -32,7 +32,7 @@ FwPendingPackets : ^FwIpiPacket[FW_PROCESSOR_MAX]
 
 FN FwSendIpi (
     IN targetid : ULONG,
-    IN function : FwIpiF,
+    IN function : FwKickProcessorCallbackF,
     IN context : ^VOID
 ) : UBYTE
 
@@ -94,7 +94,25 @@ FN FwServiceIpi (
 
     packet := FwPendingPackets[procid]
 
-    packet^.Function ( packet^.Context )
+    packet^.Function (
+        procid, // number
+        packet^.Context, // context
+    )
 
     packet^.Acknowledged = TRUE
+END
+
+FN (FwApiKickProcessorF) FwKickProcessor (
+    IN number : UWORD,
+    IN context : ^VOID,
+    IN callback : FwKickProcessorCallbackF,
+)
+
+    // Get the specified processor to execute the callback.
+
+    FwSendIpi (
+        number, // targetid
+        callback, // function
+        context, // context
+    )
 END

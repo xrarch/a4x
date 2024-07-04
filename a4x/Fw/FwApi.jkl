@@ -20,5 +20,5 @@ PUBLIC FwApiTable : FwApiTableRecord = {
     [GetCharacter] = &FwCioGetCharacter, // +4
     [ReadDisk] = &FwReadDisk,            // +8
     [PutString] = &FwPutString,          // +12
-//  [KickProcessor] = &FwKickProcessor,  // +16
+    [KickProcessor] = &FwKickProcessor,  // +16
 }

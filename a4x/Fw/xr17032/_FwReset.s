@@ -77,39 +77,39 @@
 
 FwxReset:
 .global FwxReset
-    //  Zero out RS.
+    // Zero out RS.
 
     mtcr rs, zero
 
-    //  Invalidate the caches.
+    // Invalidate the caches.
 
     li   t0, 3
     mtcr icachectrl, t0
     mtcr dcachectrl, t0
 
-    //  Set our exception block.
+    // Set our exception block.
 
     lui  t0, zero, 0xFFFE0000
     mtcr eb, t0
 
-    //  If we aren't processor zero, go to the MP corrall and wait for an IPI.
+    // If we aren't processor zero, go to the MP corrall and wait for an IPI.
 
     mfcr t0, whami
     bne  t0, .mp_corrall
 
-    //  Reset EBUS to quiescent state.
+    // Reset EBUS to quiescent state.
 
     la   t0, 0xAABBCCDD
     mov  long [0xF8800000], t0, tmp=t1
 
-    //  Set the initial stack pointer to 1024 bytes.
+    // Set the initial stack pointer to 1024 bytes.
 
     li   sp, 0x400
 
     j    FwReset
 
 .mp_corrall:
-    //  Set the stack pointer to 0x400 + (384 * id).
+    // Set the stack pointer to 0x400 + (384 * id).
 
     li   sp, 0x400
     add  sp, sp, t0 LSH 8 //  + 256 * id

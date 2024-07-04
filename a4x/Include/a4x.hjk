@@ -27,6 +27,12 @@ EXTERN FN (FwApiPutCharacterF) FwCioPutCharacter (
 
 EXTERN FN (FwApiGetCharacterF) FwCioGetCharacter () : UWORD
 
+EXTERN FN (FwApiKickProcessorF) FwKickProcessor (
+    IN number : UWORD,
+    IN context : ^VOID,
+    IN callback : FwKickProcessorCallbackF,
+)
+
 EXTERN FN FwBumpAllocate (
     IN bytes : UWORD,
 ) : ^VOID
@@ -149,18 +155,14 @@ EXTERN FwCurrentCioInputBlock : ^FwCioBlock
 
 EXTERN FwKeyboardCioBlock : FwCioBlock
 
-FNPTR FwIpiF (
-    IN context : ^VOID,
-)
-
 EXTERN FN FwSendIpi (
     IN targetid : ULONG,
-    IN function : FwIpiF,
+    IN function : FwKickProcessorCallbackF,
     IN context : ^VOID
 ) : UBYTE
 
 STRUCT FwIpiPacket
-    Function : FwIpiF,
+    Function : FwKickProcessorCallbackF,
     Context : ^VOID,
     Acknowledged : ULONG,
 END
