@@ -92,15 +92,9 @@ FwxReset:
     lui  t0, zero, 0xFFFE0000
     mtcr eb, t0
 
-    mfcr t0, whami
-
-    // Set the stack pointer to 1024 + 1024 * id.
-
-    li   sp, 1024
-    add  sp, sp, t0 LSH 10
-
     // If we aren't processor zero, go to the MP corrall and wait for an IPI.
 
+    mfcr t0, whami
     bne  t0, .mp_corrall
 
     // Reset EBUS to quiescent state.
@@ -108,9 +102,18 @@ FwxReset:
     la   t0, 0xAABBCCDD
     mov  long [0xF8800000], t0, tmp=t1
 
+    // Set the initial stack pointer to 1024 bytes.
+
+    li   sp, 0x400
+
     j    FwReset
 
 .mp_corrall:
+    // Set the stack pointer to 0x400 + (384 * id).
+
+    li   sp, 0x400
+    add  sp, sp, t0 LSH 8 //  + 256 * id
+    add  sp, sp, t0 LSH 7 //  + 128 * id
 
     mov  a0, t0
     j    FwProcessorStartup

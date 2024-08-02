@@ -10,7 +10,7 @@ TARGET "a4x"
 	SOURCES "Fw/xr17032"
 
 	LINKOPT "-bin"
-	LINKOPT "-move:text=0xFFFE0000,data=0x2000,bss=@data"
+	LINKOPT "-move:text=0xFFFE0000,data=0x1000,bss=@data"
 
 	LINK "<sdk>/Rtl/build/xr17032/Rtl.lib"
 END

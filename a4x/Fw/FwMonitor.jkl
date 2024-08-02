@@ -157,24 +157,16 @@ FN (FwCommandF) FwCommandSetEnv ()
         LEAVE
     END
 
-    contents : UBYTE[96]
-
-    IF NOT FwNextToken (
-        &contents[0], // tokenbuffer
-        96, // bufsize
-    ) THEN
-
-        RtlPrint ( "Usage: setenv [name] [contents]\n" )
-
-        LEAVE
+    WHILE FwNextTokenPointer^ == ' ' DO
+        FwNextTokenPointer += 1
     END
 
     IF FwSetNvramVariable (
         &name[0], // name
-        &contents[0], // contents
+        FwNextTokenPointer, // contents
     ) THEN
 
-        RtlPrint ( " %s = '%s'\n", &name[0], &contents[0] )
+        RtlPrint ( " %s = '%s'\n", &name[0], FwNextTokenPointer )
     
     ELSE
         RtlPrint ( "Failed to set variable '%s'\n", &name[0] )
