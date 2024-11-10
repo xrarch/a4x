@@ -27,9 +27,7 @@ FN FwProbeProcessors ()
         FwProbeCheck = 1
         BARRIER
 
-        // PROBE keyword stops this load from being optimized out.
-
-        PROBE dumpster := lsic^.Ipl
+        FwxProbeUlong ( &lsic^.Ipl )
 
         IF FwProbeCheck THEN
             // There is a processor here.

@@ -57,7 +57,7 @@ FN FwKeyboardReadScancode () : UWORD
     amtsu^.Cmd = IO_KEYBOARD_READ
     BARRIER
 
-    PROBE code := amtsu^.Data0
+    code := amtsu^.Data0
 
     IF code == 0xFFFF THEN
         RETURN -1
@@ -84,7 +84,7 @@ FN (FwCioReadF) FwKeyboardRead () : UWORD
     amtsu^.Cmd = IO_KEYBOARD_READ
     BARRIER
 
-    PROBE code := amtsu^.Data0
+    code := amtsu^.Data0
 
     IF code == 0xFFFF THEN
         RETURN -1

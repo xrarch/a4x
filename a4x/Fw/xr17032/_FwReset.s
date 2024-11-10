@@ -169,6 +169,11 @@ FwxWaitForIpis:
     hlt
     b    .loop
 
+FwxProbeUlong:
+.global FwxProbeUlong
+    mov  t0, long [a0]
+    ret
+
 .ds "XR/17032 BootROM, by Will"
 
 .section data

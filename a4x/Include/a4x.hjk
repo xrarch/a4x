@@ -131,6 +131,10 @@ EXTERN FN FwxFlushWriteBuffer ()
 
 EXTERN FN FwxMemoryBarrier ()
 
+EXTERN FN FwxProbeUlong (
+    IN addr : ^ULONG,
+)
+
 EXTERN FN FwCrash (
     IN fmt : ^UBYTE,
     ... argv argc

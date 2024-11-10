@@ -52,8 +52,9 @@ FN FwProbeDks ()
             BARRIER
         END
 
-        PROBE present := dks^.Data0
-        PROBE sectors := dks^.Data1
+        present := dks^.Data0
+        sectors := dks^.Data1
+        BARRIER
 
         IF present & 1 THEN
             RtlPrint ( "%6dKB ", (sectors * 512) / 1024 )
