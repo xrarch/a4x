@@ -29,6 +29,8 @@ FN FwProbeProcessors ()
 
         FwxProbeUlong ( &lsic^.Ipl )
 
+        FwxMemoryBarrier ()
+
         IF FwProbeCheck THEN
             // There is a processor here.
 
@@ -92,6 +94,8 @@ FN FwProbeRamSlot (
     WHILE base < max DO
         base^ = 0xA5
         BARRIER
+
+        FwxMemoryBarrier ()
 
         IF NOT FwProbeCheck THEN
             BREAK
