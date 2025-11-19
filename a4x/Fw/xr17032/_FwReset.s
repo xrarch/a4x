@@ -179,6 +179,13 @@ FwxSpinPause:
     pause
     ret
 
+FwxCauseSelfReset:
+.global FwxCauseSelfReset
+    mtcr eb, zero
+    .dl  0 // An invalid instruction
+.wait:
+    b    .wait
+
 .ds "XR/17032 BootROM, by Will"
 
 .section data

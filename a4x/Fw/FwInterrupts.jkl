@@ -30,6 +30,18 @@ END
 
 FwPendingPackets : FwIpiPacket[FW_PROCESSOR_MAX]
 
+FN FwSendRawIpi (
+    IN targetid : ULONG,
+)
+
+    // Write the IPI interrupt into the LSIC interrupt pending register for the
+    // target processor.
+
+    lsic := &(CAST IO_LSIC_BASE TO ^IoLsicTable)^.Table[targetid]
+
+    lsic^.Pending0 = 0x00000002
+END
+
 FN FwSendIpi (
     IN targetid : ULONG,
     IN function : FwKickProcessorCallbackF,
@@ -46,13 +58,7 @@ FN FwSendIpi (
     packet^.Function = function
     packet^.Context = context
 
-    // Write the IPI interrupt into the LSIC interrupt pending register for the
-    // target processor.
-
-    lsic := &(CAST IO_LSIC_BASE TO ^IoLsicTable)^.Table[targetid]
-
-    lsic^.Pending0 = 0x00000002
-    BARRIER
+    FwSendRawIpi ( targetid )
 
     IF wait THEN
         // Wait for packet.
@@ -91,6 +97,15 @@ FN FwServiceIpi (
 
     lsic^.ClaimComplete = 1
     BARRIER
+
+    IF FwProcessorResetRequested[procid] THEN
+        // The boot processor requested us to reset because he's waiting for us
+        // to reinitialize.
+
+        FwProcessorResetRequested[procid] = FALSE
+
+        FwxCauseSelfReset ()
+    END
 
     packet := &FwPendingPackets[procid]
 

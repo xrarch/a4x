@@ -126,7 +126,7 @@ END
 
 FN (FwCommandF) FwCommandReset ()
 
-    FwxReset ()
+    FwxCauseSelfReset ()
 END
 
 FN (FwCommandF) FwCommandNvReset ()

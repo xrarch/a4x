@@ -68,13 +68,13 @@ FN FwMain ()
 
     FwInitializeKeyboard ()
 
-    // If there's a framebuffer, initialize the UI facade now.
-
-    FwInitializeGui ()
-
     // Wait for remote processors.
 
     FwWaitForProcessors ()
+
+    // If there's a framebuffer, initialize the UI facade now.
+
+    FwInitializeGui ()
 
     // Decide whether to auto-boot or enter the command monitor.
 
@@ -93,18 +93,18 @@ FN FwProcessorStartup (
     
     // This is the startup routine for non-boot processors.
 
-    // We have to initialize our interrupt controller to mask everything except
-    // IPIs, and then enable interrupts. Note that before the first IPI, we have
-    // zero clue what has been initialized or hasn't, so don't touch anything!
-
-    FwInitializeInterrupts ( procid )
-
     // Wait for the ping from the boot processor.
 
     WHILE FwProcessorPingPongTable[procid] != FW_PING_PROCESSOR_CODE DO
         FwxSpinPause ()
         BARRIER
     END
+
+    // We have to initialize our interrupt controller to mask everything except
+    // IPIs, and then enable interrupts. Note that before the first IPI, we have
+    // zero clue what has been initialized or hasn't, so don't touch anything!
+
+    FwInitializeInterrupts ( procid )
 
     // Send the pong.
 

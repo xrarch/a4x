@@ -15,6 +15,9 @@
 #DEFINE FW_MONITOR_HEIGHT 24
 
 EXTERN FwProcessorPingPongTable : ULONG[FW_PROCESSOR_MAX]
+EXTERN FwProcessorResetRequested : UBYTE[FW_PROCESSOR_MAX]
+
+EXTERN FN FwxCauseSelfReset ()
 
 FNPTR FwCioWriteF (
     IN byte : UWORD,
@@ -37,6 +40,10 @@ EXTERN FN (FwApiKickProcessorF) FwKickProcessor (
     IN number : UWORD,
     IN context : ^VOID,
     IN callback : FwKickProcessorCallbackF,
+)
+
+EXTERN FN FwSendRawIpi (
+    IN targetid : ULONG,
 )
 
 EXTERN FN FwBumpAllocate (

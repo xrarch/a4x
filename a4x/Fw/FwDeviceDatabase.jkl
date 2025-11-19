@@ -7,6 +7,7 @@
 PUBLIC FwDeviceDatabase : FwDeviceDatabaseRecord
 
 PUBLIC FwProcessorPingPongTable : ULONG[FW_PROCESSOR_MAX]
+PUBLIC FwProcessorResetRequested : UBYTE[FW_PROCESSOR_MAX]
 
 FwProbeCheck : ULONG
 
@@ -47,6 +48,11 @@ FN FwWaitForProcessors ()
             // and trick us if we soft reset.
 
             FwProcessorPingPongTable[i] = FW_NULL_PROCESSOR_CODE
+
+            // Also clear the reset request so that the processor doesn't reset
+            // next time he gets an IPI.
+
+            FwProcessorResetRequested[i] = FALSE
         END
 
         i += 1
@@ -83,6 +89,15 @@ FN FwProbeProcessors ()
 
         IF FwProbeCheck THEN
             // There is a processor here.
+
+            // Send a reset IPI in case this is a soft reset and the remote
+            // processor is still spinning. If it's a hard reset, he still has
+            // interrupts disabled and will not receive this IPI.
+
+            FwProcessorResetRequested[i] = TRUE
+            BARRIER
+
+            FwSendRawIpi ( i )
 
             // Set the pingpong table entry for this processor to tell it that
             // we're waiting for a pong.
