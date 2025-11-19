@@ -92,7 +92,9 @@ FN FwProbeProcessors ()
 
             // Send a reset IPI in case this is a soft reset and the remote
             // processor is still spinning. If it's a hard reset, he still has
-            // interrupts disabled and will not receive this IPI.
+            // interrupts disabled and will not receive this IPI because he's
+            // waiting to initialize his interrupt controller after we set the
+            // ping, which will clear the IPI from the pending register.
 
             FwProcessorResetRequested[i] = TRUE
             BARRIER
