@@ -6,7 +6,11 @@
 
 PUBLIC FwDeviceDatabase : FwDeviceDatabaseRecord
 
+PUBLIC FwProcessorPingPongTable : ULONG[FW_PROCESSOR_MAX]
+
 FwProbeCheck : ULONG
+
+#DEFINE FW_MAXIMUM_PINGPONG_LOOPS 100000000
 
 FN (FwBusErrorF) FwProbeBusError ()
     FwProbeCheck = 0
@@ -14,12 +18,17 @@ END
 
 FN FwProbeProcessors ()
 
-    // We probe processors by trying to read their LSIC IPL register. If there
-    // is a bus error, there is no processor there.
+    // Set the boot processor (us) present.
+
+    FwDeviceDatabase.ProcessorCount = 1
+    FwDeviceDatabase.Processors[0].Present = TRUE
+
+    // We probe the other processors by trying to read their LSIC IPL register.
+    // If there is a bus error, there is no processor there.
 
     FwBusErrorCallback = &FwProbeBusError
 
-    i := 0
+    i := 1
 
     WHILE i < FW_PROCESSOR_MAX DO
         lsic := &(CAST IO_LSIC_BASE TO ^IoLsicTable)^.Table[i]
@@ -34,8 +43,42 @@ FN FwProbeProcessors ()
         IF FwProbeCheck THEN
             // There is a processor here.
 
-            FwDeviceDatabase.ProcessorCount += 1
+            // Set the pingpong table entry for this processor to tell it that
+            // we're waiting for a pong.
 
+            FwProcessorPingPongTable[i] = FW_PING_PROCESSOR_CODE
+            BARRIER
+
+            // Now spin for a pong.
+
+            maxloops := FW_MAXIMUM_PINGPONG_LOOPS
+
+            WHILE FwProcessorPingPongTable[i] != FW_PONG_PROCESSOR_CODE AND
+                maxloops DO
+
+                // PAUSE to allow the remote processor a shot.
+
+                FwxSpinPause ()
+                BARRIER
+
+                maxloops -= 1
+            END
+
+            IF NOT maxloops THEN
+                // It didn't pong before we ran out of loops, so something must
+                // be wrong.
+
+                FwCrash ( "Processor %d unresponsive\n", i )
+            END
+
+            // Reset the pingpong table entry to garbage so it doesn't match
+            // and trick us if we soft reset.
+
+            FwProcessorPingPongTable[i] = FW_NULL_PROCESSOR_CODE
+
+            // Set the processor present.
+
+            FwDeviceDatabase.ProcessorCount += 1
             FwDeviceDatabase.Processors[i].Present = TRUE
         END
 

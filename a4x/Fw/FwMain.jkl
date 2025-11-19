@@ -94,6 +94,17 @@ FN FwProcessorStartup (
 
     FwInitializeInterrupts ( procid )
 
+    // Wait for the ping from the boot processor.
+
+    WHILE FwProcessorPingPongTable[procid] != FW_PING_PROCESSOR_CODE DO
+        FwxSpinPause ()
+        BARRIER
+    END
+
+    // Send the pong.
+
+    FwProcessorPingPongTable[procid] = FW_PONG_PROCESSOR_CODE
+
     // Here we will wait for IPIs forever.
 
     FwxWaitForIpis ()

@@ -174,6 +174,11 @@ FwxProbeUlong:
     mov  t0, long [a0]
     ret
 
+FwxSpinPause:
+.global FwxSpinPause
+    pause
+    ret
+
 .ds "XR/17032 BootROM, by Will"
 
 .section data
