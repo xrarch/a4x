@@ -12,6 +12,7 @@ EXTERN FN FwInitializeFramebuffer ()
 EXTERN FN FwTextUserInterface ()
 EXTERN FN FwInitializeKeyboard ()
 EXTERN FN FwInitializeGui ()
+EXTERN FN FwWaitForProcessors ()
 
 EXTERN FN FwInitializeInterrupts (
     IN procid : ULONG,
@@ -70,6 +71,10 @@ FN FwMain ()
     // If there's a framebuffer, initialize the UI facade now.
 
     FwInitializeGui ()
+
+    // Wait for remote processors.
+
+    FwWaitForProcessors ()
 
     // Decide whether to auto-boot or enter the command monitor.
 

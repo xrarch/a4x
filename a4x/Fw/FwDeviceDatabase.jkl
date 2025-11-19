@@ -10,7 +10,48 @@ PUBLIC FwProcessorPingPongTable : ULONG[FW_PROCESSOR_MAX]
 
 FwProbeCheck : ULONG
 
-#DEFINE FW_MAXIMUM_PINGPONG_LOOPS 100000000
+#DEFINE FW_MAXIMUM_PINGPONG_LOOPS 10000000
+
+FN FwWaitForProcessors ()
+
+    // Wait for all of the other processors to reply to our earlier PING with a
+    // PONG.
+
+    i := 1
+
+    WHILE i < FW_PROCESSOR_MAX DO
+        IF FwDeviceDatabase.Processors[i].Present THEN
+            // Now spin for a pong.
+
+            maxloops := FW_MAXIMUM_PINGPONG_LOOPS
+
+            WHILE FwProcessorPingPongTable[i] != FW_PONG_PROCESSOR_CODE AND
+                maxloops DO
+
+                // PAUSE to allow the remote processor a shot.
+
+                FwxSpinPause ()
+                BARRIER
+
+                maxloops -= 1
+            END
+
+            IF NOT maxloops THEN
+                // It didn't pong before we ran out of loops, so something must
+                // be wrong.
+
+                FwCrash ( "Processor %d unresponsive\n", i )
+            END
+
+            // Reset the pingpong table entry to garbage so it doesn't match
+            // and trick us if we soft reset.
+
+            FwProcessorPingPongTable[i] = FW_NULL_PROCESSOR_CODE
+        END
+
+        i += 1
+    END
+END
 
 FN (FwBusErrorF) FwProbeBusError ()
     FwProbeCheck = 0
@@ -48,33 +89,6 @@ FN FwProbeProcessors ()
 
             FwProcessorPingPongTable[i] = FW_PING_PROCESSOR_CODE
             BARRIER
-
-            // Now spin for a pong.
-
-            maxloops := FW_MAXIMUM_PINGPONG_LOOPS
-
-            WHILE FwProcessorPingPongTable[i] != FW_PONG_PROCESSOR_CODE AND
-                maxloops DO
-
-                // PAUSE to allow the remote processor a shot.
-
-                FwxSpinPause ()
-                BARRIER
-
-                maxloops -= 1
-            END
-
-            IF NOT maxloops THEN
-                // It didn't pong before we ran out of loops, so something must
-                // be wrong.
-
-                FwCrash ( "Processor %d unresponsive\n", i )
-            END
-
-            // Reset the pingpong table entry to garbage so it doesn't match
-            // and trick us if we soft reset.
-
-            FwProcessorPingPongTable[i] = FW_NULL_PROCESSOR_CODE
 
             // Set the processor present.
 
