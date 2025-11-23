@@ -111,7 +111,7 @@ FN (FwApiReadDiskF) FwReadDisk (
         RETURN FALSE
     END
 
-    IF sector + count >= partition^.SectorCount THEN
+    IF sector + count > partition^.SectorCount THEN
         // Beyond end of partition.
 
         RETURN FALSE
