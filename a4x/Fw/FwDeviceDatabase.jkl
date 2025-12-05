@@ -97,7 +97,11 @@ FN FwProbeProcessors ()
             // ping, which will clear the IPI from the pending register.
 
             FwProcessorResetRequested[i] = TRUE
-            BARRIER
+
+            // Flush the write buffer to ensure the reset request is visible to
+            // the remote processor before it receives the IPI.
+
+            FwxFlushWriteBuffer ()
 
             FwSendRawIpi ( i )
 
