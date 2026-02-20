@@ -6,6 +6,10 @@ Boot firmware for the XR/station platform, written in xr17032 assembly and Jacka
 
 ![Running](https://raw.githubusercontent.com/xrarch/a4x/master/screenshot.png)
 
+## License
+
+a4x is licensed under GPLv3. See LICENSE.
+
 ## Building
 
 Place the [new SDK](https://github.com/xrarch/newsdk) at `../newsdk` relative to this repository and build it. Then the following command, run from within this repository, should produce an a4x ROM at `./build/fre/a4x.rom`:
