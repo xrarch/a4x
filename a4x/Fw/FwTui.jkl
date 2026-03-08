@@ -91,7 +91,8 @@ FN FwPrintBanner ()
     RtlPrint ( "    %dKB RAM.", FwDeviceDatabase.TotalRamBytes / 1024 )
 
     IF FwDeviceDatabase.MachineType != XR_STATION THEN
-        RtlPrint ( " %d XR/17032 Processors.", FwDeviceDatabase.ProcessorCount )
+        RtlPrint ( " %d XR/17032 Processors.",
+            FwDeviceDatabase.ExtendedProcessorCount )
     END
 
     RtlPrint ( "\n\n" )

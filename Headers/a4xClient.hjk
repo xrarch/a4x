@@ -56,6 +56,21 @@ STRUCT FwProcessorInfoRecord
     Present : UBYTE,
 END
 
+STRUCT FwExtendedProcessorInfoRecord
+    Reserved1 : UWORD,
+    Reserved2 : UWORD,
+
+    Present : UBYTE,
+    NodeId : UBYTE,
+END
+
+STRUCT FwNodeInfoRecord
+    Reserved1 : UWORD,
+    Reserved2 : UWORD,
+
+    ProcessorCount : UBYTE,
+END
+
 ENUM FwMachineType : UBYTE
     XR_STATION,
     XR_MP,
@@ -70,6 +85,9 @@ END
 #DEFINE FW_RAM_MAX 8
 #DEFINE FW_PROCESSOR_MAX 8
 
+#DEFINE FW_EXTENDED_PROCESSOR_MAX 16
+#DEFINE FW_NODE_MAX 4
+
 STRUCT FwDeviceDatabaseRecord
     TotalRamBytes : ULONG,
     ProcessorCount : UBYTE,
@@ -83,6 +101,12 @@ STRUCT FwDeviceDatabaseRecord
     Framebuffer : FwFramebufferInfoRecord,
     Keyboard : FwKeyboardInfoRecord,
     MachineType : FwMachineType,
+
+    ExtendedProcessors : FwExtendedProcessorInfoRecord[FW_EXTENDED_PROCESSOR_MAX],
+    Nodes : FwNodeInfoRecord[FW_NODE_MAX],
+    
+    ExtendedProcessorCount : UBYTE,
+    NodeCount : UBYTE,
 END
 
 FNPTR FwKickProcessorCallbackF (

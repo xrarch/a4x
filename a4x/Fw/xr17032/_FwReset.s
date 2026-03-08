@@ -109,11 +109,11 @@ FwxReset:
     j    FwReset
 
 .mp_corrall:
-    // Set the stack pointer to 0x400 + (384 * id).
+    // Set the stack pointer to 0x400 + (320 * id).
 
     li   sp, 0x400
     add  sp, sp, t0 LSH 8 //  + 256 * id
-    add  sp, sp, t0 LSH 7 //  + 128 * id
+    add  sp, sp, t0 LSH 6 //  + 64 * id
 
     mov  a0, t0
     j    FwProcessorStartup

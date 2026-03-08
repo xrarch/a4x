@@ -6,8 +6,8 @@
 
 PUBLIC FwDeviceDatabase : FwDeviceDatabaseRecord
 
-PUBLIC FwProcessorPingPongTable : ULONG[FW_PROCESSOR_MAX]
-PUBLIC FwProcessorResetRequested : UBYTE[FW_PROCESSOR_MAX]
+PUBLIC FwProcessorPingPongTable : ULONG[FW_EXTENDED_PROCESSOR_MAX]
+PUBLIC FwProcessorResetRequested : UBYTE[FW_EXTENDED_PROCESSOR_MAX]
 
 FwProbeCheck : ULONG
 
@@ -20,8 +20,8 @@ FN FwWaitForProcessors ()
 
     i := 1
 
-    WHILE i < FW_PROCESSOR_MAX DO
-        IF FwDeviceDatabase.Processors[i].Present THEN
+    WHILE i < FW_EXTENDED_PROCESSOR_MAX DO
+        IF FwDeviceDatabase.ExtendedProcessors[i].Present THEN
             // Now spin for a pong.
 
             maxloops := FW_MAXIMUM_PINGPONG_LOOPS
@@ -68,7 +68,13 @@ FN FwProbeProcessors ()
     // Set the boot processor (us) present.
 
     FwDeviceDatabase.ProcessorCount = 1
+    FwDeviceDatabase.ExtendedProcessorCount = 1
+
     FwDeviceDatabase.Processors[0].Present = TRUE
+    FwDeviceDatabase.ExtendedProcessors[0].Present = TRUE
+
+    FwDeviceDatabase.Nodes[0].ProcessorCount += 1
+    FwDeviceDatabase.NodeCount = 1
 
     // We probe the other processors by trying to read their LSIC IPL register.
     // If there is a bus error, there is no processor there.
@@ -77,7 +83,7 @@ FN FwProbeProcessors ()
 
     i := 1
 
-    WHILE i < FW_PROCESSOR_MAX DO
+    WHILE i < FW_EXTENDED_PROCESSOR_MAX DO
         lsic := &(CAST IO_LSIC_BASE TO ^IoLsicTable)^.Table[i]
 
         FwProbeCheck = 1
@@ -113,8 +119,20 @@ FN FwProbeProcessors ()
 
             // Set the processor present.
 
-            FwDeviceDatabase.ProcessorCount += 1
-            FwDeviceDatabase.Processors[i].Present = TRUE
+            IF i < FW_PROCESSOR_MAX THEN
+                FwDeviceDatabase.ProcessorCount += 1
+                FwDeviceDatabase.Processors[i].Present = TRUE
+            END
+
+            FwDeviceDatabase.ExtendedProcessorCount += 1
+            FwDeviceDatabase.ExtendedProcessors[i].Present = TRUE
+            FwDeviceDatabase.ExtendedProcessors[i].NodeId = i / 4
+
+            FwDeviceDatabase.Nodes[i / 4].ProcessorCount += 1
+
+            IF FwDeviceDatabase.Nodes[i / 4].ProcessorCount == 1 THEN
+                FwDeviceDatabase.NodeCount += 1
+            END
         END
 
         i += 1
@@ -122,7 +140,7 @@ FN FwProbeProcessors ()
 
     FwBusErrorCallback = NULLPTR
 
-    RtlPrint ( "%d XR/17032 Processor", FwDeviceDatabase.ProcessorCount )
+    RtlPrint ( "%d XR/17032 Processor", FwDeviceDatabase.ExtendedProcessorCount )
 
     IF FwDeviceDatabase.ProcessorCount > 1 THEN
         RtlPrint ( "s" )
@@ -130,12 +148,12 @@ FN FwProbeProcessors ()
 
     RtlPrint ( "\n" )
 
-    IF FwDeviceDatabase.ProcessorCount == 1 THEN
+    IF FwDeviceDatabase.ExtendedProcessorCount == 1 THEN
         // Must be an XR/station.
 
         FwDeviceDatabase.MachineType = XR_STATION
 
-    ELSEIF FwDeviceDatabase.ProcessorCount <= 4 THEN
+    ELSEIF FwDeviceDatabase.ExtendedProcessorCount <= 4 THEN
         // 2-4 processors is an XR/MP.
 
         FwDeviceDatabase.MachineType = XR_MP
@@ -299,6 +317,12 @@ FN FwProbeDevices ()
     // Fill in the device database by probing all of the devices.
 
     RtlPrint ( "Probing system devices...\n" )
+
+    RtlFillMemoryWithUlong (
+        &FwDeviceDatabase, // ptr
+        SIZEOFVALUE FwDeviceDatabase, // sz
+        0, // ulong
+    )
 
     FwProbeProcessors ()
 
