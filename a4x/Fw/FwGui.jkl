@@ -745,13 +745,18 @@ FN FwBlitSplash (
     IN bmp : ^UBYTE,
     IN x : UWORD,
     IN y : UWORD,
-)
+) : UWORD
+
+    // Blit a 64x64 boot badge to the framebuffer.
+    // Return the X coordinate of the right-most colored pixel.
 
     fb := &FwDeviceDatabase.Framebuffer
 
     h := 64
     mod := fb^.Width - 64
     ptr : ^UBYTE = fb^.Address + (y * fb^.Width) + x
+    rightmost := x
+    curX := x
 
     WHILE h DO
         i := 8
@@ -761,9 +766,14 @@ FN FwBlitSplash (
 
             WHILE j < 256 DO
                 IF bmp^ & j THEN
+                    IF curX > rightmost THEN
+                        rightmost = curX
+                    END
+
                     ptr^ = color
                 END
 
+                curX += 1
                 ptr += 1
                 j <<= 1
             END
@@ -772,9 +782,12 @@ FN FwBlitSplash (
             i -= 1
         END
 
+        curX = x
         ptr += mod
         h -= 1
     END
+
+    RETURN rightmost
 END
 
 EXTERN FN FwInitializeVideoConsole ()
@@ -867,7 +880,7 @@ FN FwInitializeGui ()
     FwCioPushOutputBlock ( &FwVideoConsoleCioBlock )
 END
 
-#DEFINE FW_OS_BANNER_HEIGHT [(FwVcFont.Height + 64)]
+#DEFINE FW_OS_BANNER_HEIGHT [(64 + 8)]
 
 FwOsBannerY : UINT
 
@@ -883,12 +896,11 @@ FN FwGuiEnteringBootProgram (
 
     // Clear the area.
 
-    x := FwSidebarX + 2
     h := FW_OS_BANNER_HEIGHT
 
     FvDrawFilledRectangle (
         222, // color
-        x, // x
+        FwSidebarX + 2, // x
         FwOsBannerY, // y
         FwSidebarWidth - 4, // w
         h, // h
@@ -899,53 +911,44 @@ FN FwGuiEnteringBootProgram (
 
         // Draw the OS's title.
 
+        osname := &bootinfo^.OsName[0]
+        badge := &bootinfo^.Badge[0]
+
         buf : UBYTE[16]
 
         RtlCopyString (
             &buf[0], // dest
-            &bootinfo^.OsName[0], // src
-            (FwSidebarWidth - 64 - 10) / FwVcFont.Width - 1, // bufsize
-
+            osname, // src
+            (FwSidebarWidth - 64 - 10) / FwGuiFont.Width, // bufsize
         )
 
-        titlelen := RtlMeasureString ( &buf[0] ) * FwVcFont.Width
+        titlelen := RtlMeasureString ( &buf[0] ) * FwGuiFont.Width
 
-        w := 64 + titlelen + 6
+        x := FwSidebarX + 5
 
-        x = FwSidebarX + (FwSidebarWidth - w) / 2
-
-        FvDrawEmptyRectangle (
-            0, // color
+        FwDrawWindowBorder (
             x, // x
             FwOsBannerY, // y
-            w, // w
+            FwSidebarWidth - 10, // w
             h, // h
         )
 
-        FvDrawString (
-            &FwVcFont, // font
-            "Running:", // string
-            0x00, // fgcolor
-            -1, // bgcolor
-            x + 2, // x
-            FwOsBannerY + 2, // y
-            -1, // w
-        )
-
-        FwBlitSplash (
+        rightedgeofbadge := FwBlitSplash (
             0x00, // color
-            &bootinfo^.Badge[0], // bmp
+            badge, // bmp
             x + 2, // x
-            FwOsBannerY + FwVcFont.Height, // y
+            FwOsBannerY + 4, // y
         )
 
+        leftedgeofborder := x + FwSidebarWidth - 10
+
         FvDrawString (
-            &FwVcFont, // font
+            &FwGuiFont, // font
             &buf[0], // string
             0x00, // fgcolor
             -1, // bgcolor
-            x + 64 + 2, // x
-            FwOsBannerY + FwVcFont.Height + 2 + (64 - FwVcFont.Height) / 2, // y
+            rightedgeofbadge + (leftedgeofborder - rightedgeofbadge - titlelen) / 2, // x
+            FwOsBannerY + 4 + (64 - FwGuiFont.Height) / 2, // y
             -1, // w
         )
     END
@@ -1004,6 +1007,68 @@ FN FwDrawMachineBitmap ()
     END
 END
 
+STRUCT FwSidebarCpuInfoRecord
+    XCoordinate : UINT,
+    YCoordinate : UINT,
+END
+
+STRUCT FwSidebarNodeInfoRecord
+    CpuInfo : FwSidebarCpuInfoRecord[4],
+END
+
+FwSidebarNodeInfo : FwSidebarNodeInfoRecord[FW_NODE_MAX]
+
+FN FwDrawNodeInfo ()
+
+    // Draw info boxes for nodes and CPUs.
+
+    i := 0
+    buf : UBYTE[32]
+
+    WHILE i < FW_NODE_MAX DO
+        IF FwDeviceDatabase.Nodes[i].Present THEN
+            x := FwSidebarX + 5
+            w := FwSidebarWidth - 10
+            h := FwVcFont.Height + 4 + 2
+
+            IF FwDeviceDatabase.Nodes[i].ProcessorCount THEN
+                h += 64
+            END
+
+            y := FwSidebarAllocateTopDown ( h + 4 )
+
+            IF y != -1 THEN
+                FwDrawWindowBorder (
+                    x, // x
+                    y, // y
+                    w, // w
+                    h, // h
+                )
+
+                RtlFormat (
+                    &buf[0], // dest
+                    32, // bufsize
+                    "Node %d: %dKB RAM", // fmt
+                    i,
+                    FwDeviceDatabase.Nodes[i].TotalRamBytes / 1024
+                )
+
+                FvDrawString (
+                    &FwVcFont, // font
+                    &buf[0], // string
+                    0x00, // fgcolor
+                    -1, // bgcolor
+                    x + 4, // x
+                    y + 4, // y
+                    -1, // w
+                )
+            END
+        END
+
+        i += 1
+    END
+END
+
 FN FwFillSidebar ()
 
     // Called after system initialization complete, to fill the sidebar with
@@ -1023,7 +1088,7 @@ FN FwFillSidebar ()
 
     FwDrawMachineBitmap ()
 
-    FwSidebarAllocateTopDown ( 8 )
+    FwDrawNodeInfo ()
 
     y := FwSidebarAllocateTopDown ( FW_OS_BANNER_HEIGHT )
 

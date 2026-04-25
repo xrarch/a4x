@@ -70,16 +70,19 @@ STRUCT FwProcessorInfoRecord
 END
 
 STRUCT FwExtendedProcessorInfoRecord
-    Reserved1 : UWORD,
-    Reserved2 : UWORD,
+    Reserved1 : ULONG,
+    Reserved2 : ULONG,
 
     Present : UBYTE,
     NodeId : UBYTE,
 END
 
 STRUCT FwNodeInfoRecord
-    Reserved1 : UWORD,
-    Reserved2 : UWORD,
+    TotalRamBytes : ULONG,
+    Present : UBYTE,
+    Reserved1 : UBYTE,
+    Reserved2 : UBYTE,
+    Reserved3 : UBYTE,
 
     ProcessorCount : UBYTE,
 END

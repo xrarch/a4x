@@ -50,8 +50,6 @@ FN FwInitializeFramebuffer ()
                 )
             END
 
-            // Draw the background and initialize the video console.
-
             RtlPrint ( "%dx%d 8-bit Color Framebuffer @ 0x%p\n",
                 fb^.Width, fb^.Height, fb^.Address )
 

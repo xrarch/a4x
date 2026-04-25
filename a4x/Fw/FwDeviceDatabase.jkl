@@ -78,6 +78,7 @@ FN FwProbeProcessors ()
     FwDeviceDatabase.ExtendedProcessors[0].Present = TRUE
 
     FwDeviceDatabase.Nodes[0].ProcessorCount += 1
+    FwDeviceDatabase.Nodes[0].Present = TRUE
     FwDeviceDatabase.NodeCount = 1
 
     // We probe the other processors by trying to read their LSIC IPL register.
@@ -128,14 +129,17 @@ FN FwProbeProcessors ()
                 FwDeviceDatabase.Processors[i].Present = TRUE
             END
 
+            nodeid := i / 4
+
             FwDeviceDatabase.ExtendedProcessorCount += 1
             FwDeviceDatabase.ExtendedProcessors[i].Present = TRUE
-            FwDeviceDatabase.ExtendedProcessors[i].NodeId = i / 4
+            FwDeviceDatabase.ExtendedProcessors[i].NodeId = nodeid
 
-            FwDeviceDatabase.Nodes[i / 4].ProcessorCount += 1
+            FwDeviceDatabase.Nodes[nodeid].ProcessorCount += 1
 
-            IF FwDeviceDatabase.Nodes[i / 4].ProcessorCount == 1 THEN
+            IF NOT FwDeviceDatabase.Nodes[nodeid].Present THEN
                 FwDeviceDatabase.NodeCount += 1
+                FwDeviceDatabase.Nodes[nodeid].Present = TRUE
             END
         END
 
@@ -247,6 +251,15 @@ FN FwProbeRam ()
 
         IF i == 0 THEN
             size += A4X_END
+        END
+
+        nodeid := i / 2
+
+        FwDeviceDatabase.Nodes[nodeid].TotalRamBytes += size
+
+        IF size != 0 AND NOT FwDeviceDatabase.Nodes[nodeid].Present THEN
+            FwDeviceDatabase.Nodes[nodeid].Present = TRUE
+            FwDeviceDatabase.NodeCount += 1
         END
 
         FwDeviceDatabase.Ram[i].PageFrameCount = size/4096
