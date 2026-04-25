@@ -49,7 +49,7 @@ FN FwCioPushOutputBlock (
     IN block : ^FwCioBlock,
 )
 
-    block^.Next = FwCurrentCioOutputBlock
+    // block^.Next = FwCurrentCioOutputBlock
     FwCurrentCioOutputBlock = block
 END
 
