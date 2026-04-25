@@ -1159,7 +1159,9 @@ FN FwDrawNodeInfo ()
 
     // Draw info boxes for nodes and CPUs.
 
-    IF FwDeviceDatabase.ProcessorCount == 1 THEN
+    IF FwDeviceDatabase.ProcessorCount == 1 AND
+        FwDeviceDatabase.NodeCount == 1 THEN
+
         LEAVE
     END
 
