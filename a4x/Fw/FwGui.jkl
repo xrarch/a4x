@@ -1034,10 +1034,18 @@ FN FwDrawMachineBitmap ()
 
     bmp := &FwMachineBitmaps[FwDeviceDatabase.MachineType]
 
-    bmpareaheight := bmp^.Height + FwGuiFont.Height
-    y := FwSidebarAllocateBottomUp ( bmpareaheight + 14 )
+    bmpareaheight := bmp^.Height + FwGuiFont.Height + 12
+    y := FwSidebarAllocateTopDown ( bmpareaheight + 16 + 2 ) + 2
 
     IF y != -1 THEN
+        FwDrawWindowBorder (
+            FwSidebarX + 5, // x
+            y, // y
+            FwSidebarWidth - 10, // w
+            bmpareaheight + 10, // h
+            TRUE, // fill
+        )
+
         x := FwSidebarX + (FwSidebarWidth - bmp^.Width) / 2
 
         FvDrawRleImage (
@@ -1045,7 +1053,7 @@ FN FwDrawMachineBitmap ()
             bmp^.BmpStart, // bmp
             bmp^.BmpEnd, // end
             x, // x
-            y, // y
+            y + 6 + 8 + FwGuiFont.Height, // y
             bmp^.Width, // w
         )
 
@@ -1076,7 +1084,7 @@ FN FwDrawMachineBitmap ()
             0x00, // fgcolor
             -1, // bgcolor
             FwSidebarX + (FwSidebarWidth - w) / 2, // x
-            y + bmp^.Height + 8, // y
+            y + 6, // y
             -1, // w
         )
     END
