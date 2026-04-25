@@ -35,6 +35,10 @@ FwXrMpBmp:
     .incbin "../../xrmpthing.rle"
 FwXrMpBmpEnd:
 
+FwCpuChipBmp:
+    .incbin "../../cpuchip.rle"
+FwCpuChipBmpEnd:
+
 ]
 
 STRUCT FwMachineBitmap
@@ -52,6 +56,9 @@ EXTERN FwXrStationBmpEnd : UBYTE
 
 EXTERN FwXrMpBmp : UBYTE
 EXTERN FwXrMpBmpEnd : UBYTE
+
+EXTERN FwCpuChipBmp : UBYTE
+EXTERN FwCpuChipBmpEnd : UBYTE
 
 #SECTION "text"
 FwMachineBitmaps : FwMachineBitmap[XR_TYPE_MAX] = {
@@ -577,6 +584,7 @@ FN FvDrawRleImageCopyColors (
 END
 
 FN FvDrawRleImage (
+    IN palette : ^UBYTE,
     IN bmp : ^UBYTE,
     IN end : ^UBYTE,
     IN x : UWORD,
@@ -590,6 +598,10 @@ FN FvDrawRleImage (
     ctrl.Palette = bmp + 2
     ctrl.NibblePool = bmp + 18
     ctrl.Index = 0
+
+    IF palette THEN
+        ctrl.Palette = palette
+    END
 
     bmp += offset
 
@@ -829,7 +841,7 @@ FN FwInitializeGui ()
 
     FwFramebufferSize = w * h
 
-    IF w < (FW_SIDEBAR_WIDTH * 2) OR h < (FW_SIDEBAR_WIDTH * 2) THEN
+    IF w < (FW_SIDEBAR_WIDTH * 2) THEN
         RtlPrint ( "%sFramebuffer too small\n", "GUI unavailable: " )
 
         LEAVE
@@ -967,6 +979,7 @@ FN FwDrawMachineBitmap ()
         x := FwSidebarX + (FwSidebarWidth - bmp^.Width) / 2
 
         FvDrawRleImage (
+            NULLPTR, // palette
             bmp^.BmpStart, // bmp
             bmp^.BmpEnd, // end
             x, // x
@@ -1018,6 +1031,60 @@ END
 
 FwSidebarNodeInfo : FwSidebarNodeInfoRecord[FW_NODE_MAX]
 
+FN FwGuiSetCpuIdle (
+    IN id : UWORD,
+)
+
+    // Set a CPU's icon to indicate idle.
+
+    IF FwSidebarArrangement == FW_SIDEBAR_NONE THEN
+        LEAVE
+    END
+
+    idlepalette : UBYTE[16]
+
+    RtlFillMemoryWithUlong (
+        &idlepalette[0], // ptr
+        16, // sz
+        0x94949494, // ulong
+    )
+
+    idlepalette[2] = 222
+
+    nodeid := id / 4
+
+    FvDrawRleImage (
+        &idlepalette[0], // palette
+        &FwCpuChipBmp, // bmp
+        &FwCpuChipBmpEnd, // end
+        FwSidebarNodeInfo[nodeid].CpuInfo[id % 4].XCoordinate, // x
+        FwSidebarNodeInfo[nodeid].CpuInfo[id % 4].YCoordinate, // y
+        32, // w
+    )
+END
+
+FN FwGuiSetCpuActive (
+    IN id : UWORD,
+)
+
+    // Set a CPU's icon to indicate activated.
+
+    IF FwSidebarArrangement == FW_SIDEBAR_NONE THEN
+        LEAVE
+    END
+
+    nodeid := id / 4
+
+    FvDrawRleImage (
+        NULLPTR, // palette
+        &FwCpuChipBmp, // bmp
+        &FwCpuChipBmpEnd, // end
+        FwSidebarNodeInfo[nodeid].CpuInfo[id % 4].XCoordinate, // x
+        FwSidebarNodeInfo[nodeid].CpuInfo[id % 4].YCoordinate, // y
+        32, // w
+    )
+END
+
 FN FwDrawNodeInfo ()
 
     // Draw info boxes for nodes and CPUs.
@@ -1025,14 +1092,26 @@ FN FwDrawNodeInfo ()
     i := 0
     buf : UBYTE[32]
 
+    inactivepalette : UBYTE[16]
+
+    RtlFillMemoryWithUlong (
+        &inactivepalette[0], // ptr
+        16, // sz
+        0, // ulong
+    )
+
+    inactivepalette[2] = 222
+
     WHILE i < FW_NODE_MAX DO
         IF FwDeviceDatabase.Nodes[i].Present THEN
             x := FwSidebarX + 5
             w := FwSidebarWidth - 10
-            h := FwVcFont.Height + 4 + 2
+            h := FwVcFont.Height + 6
 
-            IF FwDeviceDatabase.Nodes[i].ProcessorCount THEN
-                h += 64
+            procs := FwDeviceDatabase.Nodes[i].ProcessorCount
+
+            IF procs THEN
+                h += 42
             END
 
             y := FwSidebarAllocateTopDown ( h + 4 )
@@ -1062,11 +1141,38 @@ FN FwDrawNodeInfo ()
                     y + 4, // y
                     -1, // w
                 )
+
+                horizpixpercpu := (w - 8) / 4
+
+                x += (w - horizpixpercpu * procs) / 2
+                x -= 4
+
+                j := 0
+
+                WHILE j < procs DO
+                    FwSidebarNodeInfo[i].CpuInfo[j].XCoordinate = x + 8
+                    FwSidebarNodeInfo[i].CpuInfo[j].YCoordinate =
+                        y + 8 + FwVcFont.Height
+
+                    FvDrawRleImage (
+                        &inactivepalette[0], // palette
+                        &FwCpuChipBmp, // bmp
+                        &FwCpuChipBmpEnd, // end
+                        FwSidebarNodeInfo[i].CpuInfo[j].XCoordinate, // x
+                        FwSidebarNodeInfo[i].CpuInfo[j].YCoordinate, // y
+                        32, // w
+                    )
+
+                    x += horizpixpercpu
+                    j += 1
+                END
             END
         END
 
         i += 1
     END
+
+    FwGuiSetCpuActive ( 0 )
 END
 
 FN FwFillSidebar ()

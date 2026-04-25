@@ -83,6 +83,10 @@ FN FwSendIpi (
     RETURN TRUE
 END
 
+EXTERN FN FwGuiSetCpuActive (
+    IN id : UWORD,
+)
+
 FN FwServiceIpi (
     IN procid : ULONG,
 )
@@ -106,6 +110,8 @@ FN FwServiceIpi (
 
         FwxCauseSelfReset ()
     END
+
+    FwGuiSetCpuActive ( procid )
 
     packet := &FwPendingPackets[procid]
 
