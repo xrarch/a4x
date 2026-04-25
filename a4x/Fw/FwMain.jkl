@@ -8,11 +8,9 @@ EXTERN FN FwInitializeBump ()
 EXTERN FN FwCioEarlyInitialize ()
 EXTERN FN FwProbeDevices ()
 EXTERN FN FwInitializeNvram ()
-EXTERN FN FwInitializeFramebuffer ()
 EXTERN FN FwTextUserInterface ()
-EXTERN FN FwInitializeKeyboard ()
-EXTERN FN FwInitializeGui ()
 EXTERN FN FwWaitForProcessors ()
+EXTERN FN FwFillSidebar ()
 
 EXTERN FN FwInitializeInterrupts (
     IN procid : ULONG,
@@ -54,27 +52,19 @@ FN FwMain ()
 
     FwProbeDevices ()
 
+    // Fill the informational sidebar with visual information.
+
+    FwFillSidebar ()
+
 #IF CHK
     // Set FwInitializing to false. Allocations are forbidden now.
 
     FwInitializing = FALSE
 #END
 
-    // Initialize the framebuffer.
-
-    FwInitializeFramebuffer ()
-
-    // Locate keyboard.
-
-    FwInitializeKeyboard ()
-
     // Wait for remote processors.
 
     FwWaitForProcessors ()
-
-    // If there's a framebuffer, initialize the UI facade now.
-
-    FwInitializeGui ()
 
     // Decide whether to auto-boot or enter the command monitor.
 

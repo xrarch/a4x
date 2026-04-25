@@ -4,19 +4,9 @@
 
 #INCLUDE "<inc>/a4x.hjk"
 
-#ASM [
-
-FwGuiFont:
-    .incbin "../../PC.8x16.hcf"
-
-FwLogoBmp:
-    .incbin "../../xrcomputer.rle"
-    .di 0
-
-]
-
-EXTERN FwGuiFont : UBYTE
-EXTERN FwLogoBmp : UBYTE
+#DEFINE FW_VC_FG_COLOR 0xFF
+#DEFINE FW_VC_BG_COLOR 75
+#DEFINE FW_VC_MARGIN 8
 
 STRUCT FwHcfHeader
     Magic : ULONG,
@@ -27,84 +17,351 @@ STRUCT FwHcfHeader
     Reserved : UBYTE[16],
 END
 
+#DEFINE HCF_FLAG_REVERSE 1
+
+#ASM [
+
+FwGuiFont:
+    .incbin "../../Sony.12x24.hcf"
+
+FwVcFont:
+    .incbin "../../Haiku.6x12.hcf"
+
+FwXrStationBmp:
+    .incbin "../../xrstationthing.rle"
+FwXrStationBmpEnd:
+
+FwXrMpBmp:
+    .incbin "../../xrmpthing.rle"
+FwXrMpBmpEnd:
+
+]
+
+STRUCT FwMachineBitmap
+    BmpStart : ^UBYTE,
+    BmpEnd : ^UBYTE,
+    Width : UINT,
+    Height : UINT,
+END
+
+EXTERN FwGuiFont : FwHcfHeader
+EXTERN FwVcFont : FwHcfHeader
+
+EXTERN FwXrStationBmp : UBYTE
+EXTERN FwXrStationBmpEnd : UBYTE
+
+EXTERN FwXrMpBmp : UBYTE
+EXTERN FwXrMpBmpEnd : UBYTE
+
+#SECTION "text"
+FwMachineBitmaps : FwMachineBitmap[XR_TYPE_MAX] = {
+    [XR_STATION] = {
+        [BmpStart] = &FwXrStationBmp,
+        [BmpEnd] = &FwXrStationBmpEnd,
+        [Width] = 176,
+        [Height] = 119,
+    },
+    [XR_MP] = {
+        [BmpStart] = &FwXrMpBmp,
+        [BmpEnd] = &FwXrMpBmpEnd,
+        [Width] = 132,
+        [Height] = 190,
+    },
+    [XR_FRAME] = {
+        [BmpStart] = &FwXrMpBmp,
+        [BmpEnd] = &FwXrMpBmpEnd,
+        [Width] = 132,
+        [Height] = 190,
+    },
+}
+
 FwFramebufferSize : ULONG
 
+#DEFINE FW_SIDEBAR_NONE 0
+#DEFINE FW_SIDEBAR_VERTICAL 1
+
+#DEFINE FW_SIDEBAR_WIDTH 192
+#DEFINE FW_SIDEBAR_MAX_LENGTH 640
+
+FwSidebarX : UINT
+FwSidebarY : UINT
+FwSidebarWidth : UINT
+FwSidebarHeight : UINT
+FwSidebarArrangement : UBYTE = FW_SIDEBAR_NONE
+FwSidebarTopDownAllocationY : UINT
+FwSidebarBottomUpAllocationY : UINT
+
+FN FwSidebarAllocateTopDown (
+    IN pixels : UWORD,
+) : UWORD
+
+    // Allocate a number of pixels from the top of the sidebar.
+    // Returns the Y coordinate of the top of the area, or -1 if there is
+    // insufficient sidebar space.
+
+    y := FwSidebarTopDownAllocationY
+
+    IF y + pixels > FwSidebarBottomUpAllocationY THEN
+        // Would exceed the bottom-up area bounds
+
+        RETURN -1
+    END
+
+    FwSidebarTopDownAllocationY = y + pixels
+
+    RETURN y + FwSidebarY
+END
+
+FN FwSidebarAllocateBottomUp (
+    IN pixels : UWORD,
+) : UWORD
+
+    // Allocate a number of pixels from the bottom of the sidebar.
+    // Returns the Y coordinate of the top of the area, of -1 if there is
+    // insufficient sidebar space.
+
+    y := FwSidebarBottomUpAllocationY
+
+    IF pixels > y THEN
+        // Underflow
+
+        RETURN -1
+    END
+
+    y -= pixels
+
+    IF y < FwSidebarTopDownAllocationY THEN
+        // Would exceed the top-down area bounds
+
+        RETURN -1
+    END
+
+    FwSidebarBottomUpAllocationY = y
+
+    RETURN y
+END
+
 FN FvDrawCharacter (
-    IN color : UBYTE,
-    IN c : UBYTE,
-    IN x : ULONG,
-    IN y : ULONG,
+    IN font : ^FwHcfHeader,
+    IN c : UWORD,
+    IN x : UWORD,
+    IN y : UWORD,
+    IN fgcolor : UWORD,
+    IN bgcolor : UWORD,
 )
 
-    mod := FwDeviceDatabase.Framebuffer.Width
-    dest : ^UBYTE = FwDeviceDatabase.Framebuffer.Address
+    IF c >= 128 THEN
+        // To save ROM space, the glyphs for characters 128-255 are omitted
+        // from the included fonts, so clamp this to ASCII 0.
+        c = 0
+    END
 
-    dest += (y * mod) + x
+    w := font^.Width
+    h := font^.Height
 
-    mod -= 8
+    j : UWORD
+    byte : UWORD
+    left : UWORD
 
-    bmp := &FwGuiFont + SIZEOF FwHcfHeader + 16 * c
+    dest : ^UBYTE =
+        FwDeviceDatabase.Framebuffer.Address + x +
+        (y * FwDeviceDatabase.Framebuffer.Width)
 
-    w := 8
-    h := 16
+    mod := FwDeviceDatabase.Framebuffer.Width - w
 
-    WHILE h DO
-        left := w >> 3
+    bmp := CAST font + SIZEOF FwHcfHeader TO ^UBYTE
+    bmp += ((w + 7) >> 3) * h * c
 
-        WHILE left DO
-            byte := bmp^
+    IF font^.Flags & HCF_FLAG_REVERSE == 0 THEN
+        WHILE h DO
+            left = w >> 3
 
-            IF byte THEN
+            WHILE left DO
+                byte = bmp^
+
                 IF byte & 128 THEN
-                    dest[0] = color
+                    dest[0] = fgcolor
+                ELSEIF bgcolor != -1 THEN
+                    dest[0] = bgcolor
                 END
 
                 IF byte & 64 THEN
-                    dest[1] = color
+                    dest[1] = fgcolor
+                ELSEIF bgcolor != -1 THEN
+                    dest[1] = bgcolor
                 END
 
                 IF byte & 32 THEN
-                    dest[2] = color
+                    dest[2] = fgcolor
+                ELSEIF bgcolor != -1 THEN
+                    dest[2] = bgcolor
                 END
 
                 IF byte & 16 THEN
-                    dest[3] = color
+                    dest[3] = fgcolor
+                ELSEIF bgcolor != -1 THEN
+                    dest[3] = bgcolor
                 END
 
                 IF byte & 8 THEN
-                    dest[4] = color
+                    dest[4] = fgcolor
+                ELSEIF bgcolor != -1 THEN
+                    dest[4] = bgcolor
                 END
 
                 IF byte & 4 THEN
-                    dest[5] = color
+                    dest[5] = fgcolor
+                ELSEIF bgcolor != -1 THEN
+                    dest[5] = bgcolor
                 END
 
                 IF byte & 2 THEN
-                    dest[6] = color
+                    dest[6] = fgcolor
+                ELSEIF bgcolor != -1 THEN
+                    dest[6] = bgcolor
                 END
 
                 IF byte & 1 THEN
-                    dest[7] = color
+                    dest[7] = fgcolor
+                ELSEIF bgcolor != -1 THEN
+                    dest[7] = bgcolor
+                END
+
+                dest += 8
+                left -= 1
+                bmp += 1
+            END
+
+            left = w & 7
+
+            IF left THEN
+                byte = bmp^
+                bmp += 1
+                
+                IF w >> 3 THEN
+                    j = 128
+
+                ELSE
+                    j = 1 << left
+                END
+
+                WHILE left DO
+                    IF byte & j THEN
+                        dest^ = fgcolor
+                    ELSEIF bgcolor != -1 THEN
+                        dest^ = bgcolor
+                    END
+
+                    dest += 1
+                    j >>= 1
+                    left -= 1
                 END
             END
 
-            left -= 1
-            bmp += 1
-            dest += 8
+            dest += mod
+            h -= 1
         END
 
-        dest += mod
-        h -= 1
+    ELSE
+        WHILE h DO
+            left = w >> 3
+
+            WHILE left DO
+                byte = bmp^
+
+                IF byte & 128 THEN
+                    dest[7] = fgcolor
+                ELSEIF bgcolor != -1 THEN
+                    dest[7] = bgcolor
+                END
+
+                IF byte & 64 THEN
+                    dest[6] = fgcolor
+                ELSEIF bgcolor != -1 THEN
+                    dest[6] = bgcolor
+                END
+
+                IF byte & 32 THEN
+                    dest[5] = fgcolor
+                ELSEIF bgcolor != -1 THEN
+                    dest[5] = bgcolor
+                END
+
+                IF byte & 16 THEN
+                    dest[4] = fgcolor
+                ELSEIF bgcolor != -1 THEN
+                    dest[4] = bgcolor
+                END
+
+                IF byte & 8 THEN
+                    dest[3] = fgcolor
+                ELSEIF bgcolor != -1 THEN
+                    dest[3] = bgcolor
+                END
+
+                IF byte & 4 THEN
+                    dest[2] = fgcolor
+                ELSEIF bgcolor != -1 THEN
+                    dest[2] = bgcolor
+                END
+
+                IF byte & 2 THEN
+                    dest[1] = fgcolor
+                ELSEIF bgcolor != -1 THEN
+                    dest[1] = bgcolor
+                END
+
+                IF byte & 1 THEN
+                    dest[0] = fgcolor
+                ELSEIF bgcolor != -1 THEN
+                    dest[0] = bgcolor
+                END
+
+                dest += 8
+                left -= 1
+                bmp += 1
+            END
+
+            left = w & 7
+
+            IF left THEN
+                byte = bmp^
+                bmp += 1
+                j = 1
+
+                WHILE left DO
+                    IF byte & j THEN
+                        dest^ = fgcolor
+                    ELSEIF bgcolor != -1 THEN
+                        dest^ = bgcolor
+                    END
+
+                    dest += 1
+                    j <<= 1
+                    left -= 1
+                END
+            END
+
+            dest += mod
+            h -= 1
+        END
     END
 END
 
 FN FvDrawString (
+    IN font : ^FwHcfHeader,
     IN string : ^UBYTE,
-    IN color : UBYTE,
+    IN fgcolor : UWORD,
+    IN bgcolor : UWORD,
     IN x : UWORD,
     IN y : UWORD,
     IN w : UWORD,
-)
+) : UWORD
+
+    // Draw a string to the framebuffer.
+
+    maxwidth := 0
+    width := 0
 
     // Convert wrap width to character count.
 
@@ -114,53 +371,35 @@ FN FvDrawString (
 
     WHILE string^ DO
         IF string^ == '\n' OR NOT left THEN
-            y += 16
+            y += font^.Height
             left = w
             curx = x
+            width = 0
         END
 
         IF string^ != '\n' THEN
             FvDrawCharacter (
-                color, // color
+                font, // font
                 string^, // character
                 curx, // x
                 y, // y
+                fgcolor, // fgcolor
+                bgcolor, // bgcolor
             )
 
             left -= 1
-            curx += 8
+            curx += font^.Width
+            width += font^.Width
+
+            IF width > maxwidth THEN
+                maxwidth = width
+            END
         END
 
         string += 1
     END
-END
 
-FN FvDrawStringCentered (
-    IN string : ^UBYTE,
-    IN color : UBYTE,
-    IN y : UWORD,
-)
-
-    x := FwDeviceDatabase.Framebuffer.Width / 2
-
-    len := 0
-
-    s := string
-
-    WHILE s^ AND s^ != '\n' DO
-        s += 1
-        len += 1
-    END
-
-    x -= (len * 8) / 2
-
-    FvDrawString (
-        string, // string
-        color, // color
-        x, // x
-        y, // y
-        -1, // w
-    )
+    RETURN maxwidth
 END
 
 FN FvClearScreen (
@@ -302,56 +541,57 @@ FN FvDrawEmptyRectangle (
     END
 END
 
-#DEFINE FV_SHADOW_WIDTH 5
-#DEFINE FV_SHADOW_MARGIN 10
+STRUCT FvDrawRleControl
+    Palette : ^UBYTE,
+    NibblePool : ^UBYTE,
+    Index : UWORD,
+END
 
-FN FvDrawShadowBox (
-    IN x : UWORD,
-    IN y : UWORD,
-    IN w : UWORD,
-    IN h : UWORD,
+FN FvDrawRleImageNextColor (
+    IN ctrl : ^FvDrawRleControl,
+) : UWORD
+
+    color := ctrl^.NibblePool[ctrl^.Index / 2]
+
+    color >>= (ctrl^.Index & 1) * 4
+
+    color &= 15
+
+    ctrl^.Index += 1
+
+    RETURN ctrl^.Palette[color]
+END
+
+FN FvDrawRleImageCopyColors (
+    IN ctrl : ^FvDrawRleControl,
+    IN dest : ^UBYTE,
+    IN sz : UWORD,
 )
 
-    // Draw a shadowed box GUI element.
-    // Note that the width and height do not include the shadow.
+    WHILE sz DO
+        dest^ = FvDrawRleImageNextColor ( ctrl )
 
-    // Draw the central box.
-#IF 0
-    FvDrawEmptyRectangle (
-        0x00, // color
-        x, // x
-        y, // y
-        w, // w
-        h, // h
-    )
-#END
-    // Draw the bottom part of the shadow.
-
-    FvDrawFilledRectangle (
-        0x00, // color
-        x + FV_SHADOW_MARGIN, // x
-        y + h + 1, // y
-        w - FV_SHADOW_MARGIN + FV_SHADOW_WIDTH, // w
-        FV_SHADOW_WIDTH, // h
-    )
-
-    // Draw the right part of the shadow.
-
-    FvDrawFilledRectangle (
-        0x00, // color
-        x + w + 1, // x
-        y + FV_SHADOW_MARGIN, // y
-        FV_SHADOW_WIDTH, // w
-        h - FV_SHADOW_MARGIN + FV_SHADOW_WIDTH + 1, // h
-    )
+        dest += 1
+        sz -= 1
+    END
 END
 
 FN FvDrawRleImage (
     IN bmp : ^UBYTE,
+    IN end : ^UBYTE,
     IN x : UWORD,
     IN y : UWORD,
     IN w : UWORD,
 )
+
+    offset := bmp^ | ((bmp + 1)^ << 8)
+
+    ctrl : FvDrawRleControl
+    ctrl.Palette = bmp + 2
+    ctrl.NibblePool = bmp + 18
+    ctrl.Index = 0
+
+    bmp += offset
 
     fb := &FwDeviceDatabase.Framebuffer
 
@@ -359,66 +599,146 @@ FN FvDrawRleImage (
     ptr : ^UBYTE = fb^.Address + (y * fb^.Width) + x
     mod := fb^.Width - w
 
-    WHILE TRUE DO
-        count := bmp^ | ((bmp + 1)^ << 8)
-        color := (bmp + 2)^
-        ulong := (color << 24) | (color << 16) | (color << 8) | color
+    WHILE bmp < end DO
+        count : UWORD
 
-        IF NOT count THEN
-            BREAK
+        control := bmp^
+        count = control & 127
+        bmp += 1
+
+        // Count is encoded biased so unbias it
+
+        count += 1
+
+        IF (control & 128) == 0 THEN
+            // Literal bytes follow
+
+            WHILE col + count >= w DO
+                // Do a full row.
+
+                FvDrawRleImageCopyColors (
+                    &ctrl, // ctrl
+                    ptr, // dest
+                    w - col, // sz
+                )
+
+                ptr += w - col + mod
+                count -= w - col
+                col = 0
+            END
+
+            IF count THEN
+                FvDrawRleImageCopyColors (
+                    &ctrl, // ctrl
+                    ptr, // dest
+                    count, // sz
+                )
+
+                ptr += count
+                col += count
+            END
+
+        ELSE
+            // A run of the same byte follows
+
+            color := FvDrawRleImageNextColor ( &ctrl )
+
+            ulong := (color << 24) | (color << 16) | (color << 8) | color
+
+            WHILE col + count >= w DO
+                // Do a full row.
+
+                RtlFillMemoryWithUlong (
+                    ptr, // dest
+                    w - col, // count
+                    ulong, // ulong
+                )
+
+                ptr += w - col + mod
+                count -= w - col
+                col = 0
+            END
+
+            IF count THEN
+                RtlFillMemoryWithUlong (
+                    ptr, // dest
+                    count, // count
+                    ulong, // ulong
+                )
+
+                ptr += count
+                col += count
+            END
         END
-
-        WHILE col + count >= w DO
-            // Do a full row.
-
-            RtlFillMemoryWithUlong (
-                ptr, // dest
-                w - col, // count
-                ulong, // ulong
-            )
-
-            ptr += w - col + mod
-            count -= w - col
-            col = 0
-        END
-
-        IF count THEN
-            RtlFillMemoryWithUlong (
-                ptr, // dest
-                count, // count
-                ulong, // ulong
-            )
-
-            ptr += count
-            col += count
-        END
-
-        bmp += 3
     END
 END
 
-FN FwDrawBackground ()
+FN FwDrawWindowBorder (
+    IN x : UWORD,
+    IN y : UWORD,
+    IN w : UWORD,
+    IN h : UWORD,
+)
 
-    // Clear screen to white.
+    IF w < 5 THEN
+        LEAVE
+    END
 
-    FvClearScreen ( 0xFF )
+    IF h < 5 THEN
+        LEAVE
+    END
 
-    // Draw identifying text.
+    FvDrawEmptyRectangle (
+        0, // color
+        x, // x
+        y, // y
+        w, // w
+        h, // h
+    )
 
-    FvDrawRleImage (
-        &FwLogoBmp, // bmp
-        FwDeviceDatabase.Framebuffer.Width / 2 - 300, // x
-        FwDeviceDatabase.Framebuffer.Height - 116 - 10, // y
-        600, // w
+    FvDrawEmptyRectangle (
+        0xFF, // color
+        x + 1, // x
+        y + 1, // y
+        w - 3, // w
+        1, // h
+    )
+
+    FvDrawEmptyRectangle (
+        0xFF, // color
+        x + 1, // x
+        y + 2, // y
+        1, // w
+        h - 4, // h
+    )
+
+    FvDrawEmptyRectangle (
+        0, // color
+        x + w - 2, // x
+        y + 1, // y
+        1, // w
+        h - 3, // h
+    )
+
+    FvDrawEmptyRectangle (
+        0, // color
+        x + 1, // x
+        y + h - 2, // y
+        w - 2, // w
+        1, // h
+    )
+
+    FvDrawFilledRectangle (
+        222, // color
+        x + 2, // x
+        y + 2, // y
+        w - 4, // w
+        h - 4, // h
     )
 END
 
 #DEFINE TILE_WIDTH 120
 #DEFINE TILE_HEIGHT 128
-
-FwBootPickerX : ULONG
-FwBootPickerY : ULONG
-FwBootPickerIndex : ULONG
 
 FN FwBlitSplash (
     IN color : UBYTE,
@@ -457,227 +777,12 @@ FN FwBlitSplash (
     END
 END
 
-FN FwDrawTile (
-    IN index : UWORD,
-    IN selected : UBYTE,
-)
-
-    bootable := FwBootableTable[index]
-
-    col := index % 4
-    row := index / 4
-
-    x := FwBootPickerX + (col * TILE_WIDTH)
-    y := FwBootPickerY + (row * TILE_HEIGHT)
-
-    FwBlitSplash (
-        0x00, // color
-        &bootable^.BootInfo^.Badge[0], // bmp
-        x + 28, // x
-        y + 10, // y
-    )
-
-    osname := &bootable^.BootInfo^.OsName[0]
-
-    FvDrawString (
-        osname, // string
-        0x00, // color
-        x + TILE_WIDTH / 2 - (RtlMeasureString ( osname ) * 8) / 2, // x
-        y + 82, // y
-        -1, // w
-    )
-
-    textbuf : UBYTE[64]
-
-    RtlFormat (
-        &textbuf[0], // dest
-        64, // bufsize
-        "dks%ds%d", // fmt
-        bootable^.Id,
-        bootable^.PartitionId,
-    )
-
-    FvDrawString (
-        &textbuf[0], // string
-        0x00, // color
-        x + TILE_WIDTH / 2 - (RtlMeasureString ( &textbuf[0] ) * 8) / 2, // x
-        y + 98, // y
-        -1, // w
-    )
-
-    IF selected THEN
-        FvDrawEmptyRectangle (
-            0x00, // color
-            x + 2, // x
-            y + 2, // y
-            TILE_WIDTH - 4, // w
-            TILE_HEIGHT - 4, // h
-        )
-
-    ELSE
-        FvDrawEmptyRectangle (
-            0xFF, // color
-            x + 2, // x
-            y + 2, // y
-            TILE_WIDTH - 4, // w
-            TILE_HEIGHT - 4, // h
-        )
-    END
-END
-
-FN FwBootPicker ()
-
-    // Draw a boot picker on the screen.
-
-    IF FwDeviceDatabase.BootableCount < 2 THEN
-        // Zero or only one bootable device. Don't bother.
-
-        LEAVE
-    END
-
-    IF FwDeviceDatabase.BootableCount > 12 THEN
-        LEAVE
-    END
-
-    // Draw the firmware background.
-
-    FwDrawBackground ()
-
-    // Figure out rows and columns of the boot picker such that there are 4
-    // bootable devices on each row.
-
-    rows := (FwDeviceDatabase.BootableCount + 3) / 4
-    cols := FwDeviceDatabase.BootableCount % 4
-
-    IF rows > 1 OR NOT cols THEN
-        cols = 4
-    END
-
-    boxwidth := cols * TILE_WIDTH
-    boxheight := rows * TILE_HEIGHT
-
-    FwBootPickerX = FwDeviceDatabase.Framebuffer.Width / 2 - boxwidth / 2
-    FwBootPickerY = FwDeviceDatabase.Framebuffer.Height / 2 - boxheight / 2
-
-    FvDrawShadowBox (
-        FwBootPickerX, // x
-        FwBootPickerY, // y
-        boxwidth, // w
-        boxheight, // h
-    )
-
-    FvDrawStringCentered (
-        "Use left and right arrow keys to select a
-bootable partition. Strike enter to boot.
-Strike ESC to enter the command monitor.", // string
-        0x00, // color
-        FwBootPickerY - 68, // y
-    )
-
-    // Draw the tiles.
-
-    i := 0
-
-    WHILE i < FwDeviceDatabase.BootableCount DO
-        FwDrawTile (
-            i, // index
-            i == 0, // selected
-        )
-
-        i += 1
-    END
-
-    WHILE TRUE DO
-        scan := FwKeyboardReadScancode ()
-
-        IF scan == -1 THEN
-            CONTINUE
-        END
-
-        IF scan == 53 THEN
-            // Escape.
-
-            BREAK
-
-        ELSEIF scan == 54 THEN
-            // Left arrow.
-
-            IF FwBootPickerIndex != 0 THEN
-                FwDrawTile (
-                    FwBootPickerIndex, // index
-                    FALSE, // selected
-                )
-
-                FwBootPickerIndex -= 1
-
-                FwDrawTile (
-                    FwBootPickerIndex, // index
-                    TRUE, // selected
-                )
-            END
-
-        ELSEIF scan == 55 THEN
-            // Right arrow.
-
-            IF FwBootPickerIndex != FwDeviceDatabase.BootableCount - 1 THEN
-                FwDrawTile (
-                    FwBootPickerIndex, // index
-                    FALSE, // selected
-                )
-
-                FwBootPickerIndex += 1
-
-                FwDrawTile (
-                    FwBootPickerIndex, // index
-                    TRUE, // selected
-                )
-            END
-
-        ELSEIF scan == 50 THEN
-            // Return.
-
-            FwSelectedBootPartition = FwBootableTable[FwBootPickerIndex]
-
-            BREAK
-        END
-    END
-END
-
-// FORWARD
 EXTERN FN FwInitializeVideoConsole ()
-
-FN FwInitializeGui ()
-
-    // Check for a framebuffer and keyboard.
-
-    IF NOT FwDeviceDatabase.Framebuffer.Address THEN
-        RtlPrint ( "%s No framebuffer installed\n", "GUI unavailable:" )
-
-        LEAVE
-    END
-
-    IF NOT FwDeviceDatabase.Keyboard.Id THEN
-        RtlPrint ( "%s No keyboard attached\n", "GUI unavailable:" )
-
-        LEAVE
-    END
-
-    // Initialize some "cached" parameters.
-
-    FwFramebufferSize = FwDeviceDatabase.Framebuffer.Width *
-        FwDeviceDatabase.Framebuffer.Height
-
-    // Display the boot picker.
-
-    FwBootPicker ()
-
-    // Initialize the screen to display the video console.
-
-    FwInitializeVideoConsole ()
-END
 
 FwVideoConsoleX : UWORD
 FwVideoConsoleY : UWORD
+FwVideoConsoleW : UWORD
+FwVideoConsoleH : UWORD
 
 FwCursorX : UINT
 FwCursorY : UINT
@@ -689,35 +794,246 @@ EXTERN FN (FwCioWriteF) FwVideoConsoleWrite (
     IN byte : UWORD,
 )
 
-#SECTION "text"
 PUBLIC FwVideoConsoleCioBlock : FwCioBlock = {
     [Write] = &FwVideoConsoleWrite,
     [Read] = NULLPTR,
 }
 
-FN FwInitializeVideoConsole ()
+FN FwInitializeGui ()
 
-    // Draw the background.
+    // Check for a framebuffer.
 
-    FwDrawBackground ()
+    IF NOT FwDeviceDatabase.Framebuffer.Address THEN
+        RtlPrint ( "%sNo framebuffer installed\n", "GUI unavailable: " )
 
-    // Draw the shadow box in the center of the screen.
+        LEAVE
+    END
 
-    x := FwDeviceDatabase.Framebuffer.Width / 2 - 320
-    y := FwDeviceDatabase.Framebuffer.Height / 2 - 192
+    // Initialize some "cached" parameters.
 
-    FvDrawShadowBox (
-        x, // x
-        y, // y
-        640, // w
-        384, // h
+    w := FwDeviceDatabase.Framebuffer.Width
+    h := FwDeviceDatabase.Framebuffer.Height
+
+    FwFramebufferSize = w * h
+
+    IF w < (FW_SIDEBAR_WIDTH * 2) OR h < (FW_SIDEBAR_WIDTH * 2) THEN
+        RtlPrint ( "%sFramebuffer too small\n", "GUI unavailable: " )
+
+        LEAVE
+    END
+
+    // Clear screen.
+
+    FvClearScreen ( FW_VC_BG_COLOR )
+
+    // Carve off FW_SIDEBAR_WIDTH pixels from the longer dimension of the screen
+    // for the informational sidebar. Use the rest of the space for the video
+    // console.
+
+    FwSidebarX = 0
+    FwSidebarY = 0
+    FwSidebarWidth = FW_SIDEBAR_WIDTH
+    FwSidebarHeight = h
+    FwSidebarArrangement = FW_SIDEBAR_VERTICAL
+
+    FwSidebarTopDownAllocationY = 4
+    FwSidebarBottomUpAllocationY = FwSidebarHeight - 4
+
+    FwVideoConsoleX = FwSidebarX + FW_SIDEBAR_WIDTH + FW_VC_MARGIN
+    FwVideoConsoleY = FW_VC_MARGIN
+    FwVideoConsoleW =
+        (w - FW_SIDEBAR_WIDTH - FW_VC_MARGIN * 2) / FwVcFont.Width
+    FwVideoConsoleH = (h - FW_VC_MARGIN * 2) / FwVcFont.Height
+
+    // Draw the sidebar.
+
+    FwDrawWindowBorder (
+        FwSidebarX, // x
+        FwSidebarY, // y
+        FwSidebarWidth, // w
+        FwSidebarHeight, // h
     )
 
-    FwVideoConsoleX = x
-    FwVideoConsoleY = y
+    fbox := &FwDeviceDatabase.ConsoleBox
+    fbox^.XCoordinate = FwVideoConsoleX
+    fbox^.YCoordinate = FwVideoConsoleY
+    fbox^.Width = FwVideoConsoleW * FwVcFont.Width
+    fbox^.Height = FwVideoConsoleH * FwVcFont.Height
+    fbox^.BgColor = FW_VC_BG_COLOR
+    fbox^.FgColor = FW_VC_FG_COLOR
 
-    FwCurrentCioOutputBlock = &FwVideoConsoleCioBlock
-    FwCurrentCioInputBlock = &FwKeyboardCioBlock
+    // Initialize the video console.
+
+    FwCioPushOutputBlock ( &FwVideoConsoleCioBlock )
+END
+
+#DEFINE FW_OS_BANNER_HEIGHT [(FwVcFont.Height + 64)]
+
+FwOsBannerY : UINT
+
+FN FwGuiEnteringBootProgram (
+    IN bootinfo : ^FwDiskBootInfo,
+)
+
+    // Draw the name and badge of the OS into the sidebar.
+
+    IF FwOsBannerY == 0 THEN
+        LEAVE
+    END
+
+    // Clear the area.
+
+    x := FwSidebarX + 2
+    h := FW_OS_BANNER_HEIGHT
+
+    FvDrawFilledRectangle (
+        222, // color
+        x, // x
+        FwOsBannerY, // y
+        FwSidebarWidth - 4, // w
+        h, // h
+    )
+
+    IF bootinfo THEN
+        // Draw the OS's boot badge.
+
+        // Draw the OS's title.
+
+        buf : UBYTE[16]
+
+        RtlCopyString (
+            &buf[0], // dest
+            &bootinfo^.OsName[0], // src
+            (FwSidebarWidth - 64 - 10) / FwVcFont.Width - 1, // bufsize
+
+        )
+
+        titlelen := RtlMeasureString ( &buf[0] ) * FwVcFont.Width
+
+        w := 64 + titlelen + 6
+
+        x = FwSidebarX + (FwSidebarWidth - w) / 2
+
+        FvDrawEmptyRectangle (
+            0, // color
+            x, // x
+            FwOsBannerY, // y
+            w, // w
+            h, // h
+        )
+
+        FvDrawString (
+            &FwVcFont, // font
+            "Running:", // string
+            0x00, // fgcolor
+            -1, // bgcolor
+            x + 2, // x
+            FwOsBannerY + 2, // y
+            -1, // w
+        )
+
+        FwBlitSplash (
+            0x00, // color
+            &bootinfo^.Badge[0], // bmp
+            x + 2, // x
+            FwOsBannerY + FwVcFont.Height, // y
+        )
+
+        FvDrawString (
+            &FwVcFont, // font
+            &buf[0], // string
+            0x00, // fgcolor
+            -1, // bgcolor
+            x + 64 + 2, // x
+            FwOsBannerY + FwVcFont.Height + 2 + (64 - FwVcFont.Height) / 2, // y
+            -1, // w
+        )
+    END
+END
+
+FN FwDrawMachineBitmap ()
+
+    // Draw the machine bitmap.
+
+    bmp := &FwMachineBitmaps[FwDeviceDatabase.MachineType]
+
+    bmpareaheight := bmp^.Height + FwGuiFont.Height
+    y := FwSidebarAllocateBottomUp ( bmpareaheight + 14 )
+
+    IF y != -1 THEN
+        x := FwSidebarX + (FwSidebarWidth - bmp^.Width) / 2
+
+        FvDrawRleImage (
+            bmp^.BmpStart, // bmp
+            bmp^.BmpEnd, // end
+            x, // x
+            y, // y
+            bmp^.Width, // w
+        )
+
+        upperbuf : UBYTE[32]
+
+        RtlCopyString (
+            &upperbuf[0], // dest
+            FwMachineTypeString[FwDeviceDatabase.MachineType], // src
+            32, // bufsize
+        )
+
+        i := 0
+
+        WHILE upperbuf[i] DO
+            IF upperbuf[i] >= 'a' AND upperbuf[i] <= 'z' THEN
+                upperbuf[i] -= 'a'
+                upperbuf[i] += 'A'
+            END
+
+            i += 1
+        END
+
+        w := RtlMeasureString ( &upperbuf[0] ) * FwGuiFont.Width
+
+        FvDrawString (
+            &FwGuiFont, // font
+            &upperbuf[0], // string
+            0x00, // fgcolor
+            -1, // bgcolor
+            FwSidebarX + (FwSidebarWidth - w) / 2, // x
+            y + bmp^.Height + 8, // y
+            -1, // w
+        )
+    END
+END
+
+FN FwFillSidebar ()
+
+    // Called after system initialization complete, to fill the sidebar with
+    // information.
+
+    IF NOT FwDeviceDatabase.Framebuffer.Address THEN
+        LEAVE
+    END
+
+    IF FwDeviceDatabase.Keyboard.Id THEN
+        FwCioSwitchInputBlock ( &FwKeyboardCioBlock )
+    END
+
+    IF FwSidebarArrangement == FW_SIDEBAR_NONE THEN
+        LEAVE
+    END
+
+    FwDrawMachineBitmap ()
+
+    FwSidebarAllocateTopDown ( 8 )
+
+    y := FwSidebarAllocateTopDown ( FW_OS_BANNER_HEIGHT )
+
+    IF y != -1 THEN
+        FwOsBannerY = y
+    END
+
+    // Draw firmware banner.
+
+    FwGuiEnteringBootProgram ( NULLPTR )
 END
 
 FN FwVideoConsoleScroll ()
@@ -729,16 +1045,16 @@ FN FwVideoConsoleScroll ()
     topleftptr : ^UBYTE =
         fb^.Address + (FwVideoConsoleY * fb^.Width) + FwVideoConsoleX
 
-    nextlineptr := topleftptr + fb^.Width * 16
+    nextlineptr := topleftptr + fb^.Width * FwVcFont.Height
     tptr := topleftptr
 
     i := 0
 
-    WHILE i < 16 * 23 DO
+    WHILE i < FwVcFont.Height * (FwVideoConsoleH - 1) DO
         RtlCopyBytes (
             tptr, // dest
             nextlineptr, // src
-            80 * 8, // sz
+            FwVideoConsoleW * FwVcFont.Width, // sz
         )
 
         i += 1
@@ -748,15 +1064,19 @@ FN FwVideoConsoleScroll ()
 
     // Now clear the bottom line.
 
-    nextlineptr = topleftptr + fb^.Width * 23 * 16
+    nextlineptr =
+        topleftptr + fb^.Width * (FwVideoConsoleH - 1) * FwVcFont.Height
 
     i = 0
 
-    WHILE i < 16 DO
+    WHILE i < FwVcFont.Height DO
         RtlFillMemoryWithUlong (
             nextlineptr, // dest
-            80 * 8, // size
-            0xFFFFFFFF, // ulong
+            FwVideoConsoleW * FwVcFont.Width, // size
+            (FW_VC_BG_COLOR << 24) |
+            (FW_VC_BG_COLOR << 16) |
+            (FW_VC_BG_COLOR << 8) |
+            FW_VC_BG_COLOR, // ulong
         )
 
         i += 1
@@ -790,25 +1110,28 @@ FN (FwCioWriteF) FwVideoConsoleWrite (
             FwCursorY = 0
 
             FvDrawFilledRectangle (
-                0xFF, // color
+                FW_VC_BG_COLOR, // color
                 FwVideoConsoleX, // x
                 FwVideoConsoleY, // y
-                80 * 8, // w
-                24 * 16, // h
+                FwVideoConsoleW * FwVcFont.Width, // w
+                FwVideoConsoleH * FwVcFont.Height, // h
             )
 
             FwVcEscape = FALSE
+
+            FwDeviceDatabase.ConsoleBox.CursorX = 0
+            FwDeviceDatabase.ConsoleBox.CursorY = 0
 
             LEAVE
         END
 
         IF byte == 'K' THEN
             FvDrawFilledRectangle (
-                0xFF, // color
+                FW_VC_BG_COLOR, // color
                 FwVideoConsoleX, // x
-                FwVideoConsoleY + FwCursorY * 16, // y
-                80 * 8, // w
-                16, // h
+                FwVideoConsoleY + FwCursorY * FwVcFont.Height, // y
+                FwVideoConsoleW * FwVcFont.Width, // w
+                FwVcFont.Height, // h
             )
 
             FwVcEscape = FALSE
@@ -835,25 +1158,30 @@ FN (FwCioWriteF) FwVideoConsoleWrite (
         FwCursorY += 1
         FwCursorX = 0
 
-        IF FwCursorY >= 24 THEN
-            FwCursorY = 23
+        IF FwCursorY >= FwVideoConsoleH THEN
+            FwCursorY = FwVideoConsoleH - 1
 
             FwVideoConsoleScroll ()
         END
+
+        FwDeviceDatabase.ConsoleBox.CursorX = 0
+        FwDeviceDatabase.ConsoleBox.CursorY = FwCursorY * FwVcFont.Height
 
         LEAVE
     END
 
     FvDrawFilledRectangle (
-        0xFF, // color
-        FwVideoConsoleX + FwCursorX * 8, // x
-        FwVideoConsoleY + FwCursorY * 16, // y
-        8, // w
-        16, // h
+        FW_VC_BG_COLOR, // color
+        FwVideoConsoleX + FwCursorX * FwVcFont.Width, // x
+        FwVideoConsoleY + FwCursorY * FwVcFont.Height, // y
+        FwVcFont.Width, // w
+        FwVcFont.Height, // h
     )
 
     IF byte == '\r' THEN
         FwCursorX = 0
+
+        FwDeviceDatabase.ConsoleBox.CursorX = 0
 
         LEAVE
     END
@@ -864,25 +1192,27 @@ FN (FwCioWriteF) FwVideoConsoleWrite (
 
         ELSEIF FwCursorY THEN
             FwCursorY -= 1
-            FwCursorX = 79
+            FwCursorX = FwVideoConsoleW - 1
         END
 
     ELSE
         FvDrawCharacter (
-            0x00, // color
+            &FwVcFont, // font
             byte, // c
-            FwVideoConsoleX + FwCursorX * 8, // x
-            FwVideoConsoleY + FwCursorY * 16, // y
+            FwVideoConsoleX + FwCursorX * FwVcFont.Width, // x
+            FwVideoConsoleY + FwCursorY * FwVcFont.Height, // y
+            FW_VC_FG_COLOR, // fgcolor
+            -1, // bgcolor
         )
 
         FwCursorX += 1
 
-        IF FwCursorX >= 80 THEN
+        IF FwCursorX >= FwVideoConsoleW THEN
             FwCursorX = 0
             FwCursorY += 1
 
-            IF FwCursorY >= 24 THEN
-                FwCursorY = 23
+            IF FwCursorY >= FwVideoConsoleH THEN
+                FwCursorY = FwVideoConsoleH - 1
 
                 FwVideoConsoleScroll ()
             END
@@ -890,10 +1220,13 @@ FN (FwCioWriteF) FwVideoConsoleWrite (
     END
 
     FvDrawFilledRectangle (
-        0x00, // color
-        FwVideoConsoleX + FwCursorX * 8, // x
-        FwVideoConsoleY + FwCursorY * 16, // y
-        8, // w
-        16, // h
+        FW_VC_FG_COLOR, // color
+        FwVideoConsoleX + FwCursorX * FwVcFont.Width, // x
+        FwVideoConsoleY + FwCursorY * FwVcFont.Height, // y
+        FwVcFont.Width, // w
+        FwVcFont.Height, // h
     )
+
+    FwDeviceDatabase.ConsoleBox.CursorX = FwCursorX * FwVcFont.Width
+    FwDeviceDatabase.ConsoleBox.CursorY = FwCursorY * FwVcFont.Height
 END

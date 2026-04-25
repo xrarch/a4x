@@ -38,9 +38,6 @@ FN (FwCioReadF) FwSerialRead () : UWORD
     RETURN char
 END
 
-// Force the table into the text section so that it stays in ROM.
-
-#SECTION "text"
 PUBLIC FwSerialCioBlock : FwCioBlock = {
     [Write] = &FwSerialWrite,
     [Read] = &FwSerialRead,

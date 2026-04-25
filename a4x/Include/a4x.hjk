@@ -26,9 +26,18 @@ FNPTR FwCioWriteF (
 FNPTR FwCioReadF () : UWORD
 
 STRUCT FwCioBlock
+    Next : ^FwCioBlock,
     Write : FwCioWriteF,
     Read : FwCioReadF,
 END
+
+EXTERN FN FwCioPushOutputBlock (
+    IN block : ^FwCioBlock,
+)
+
+EXTERN FN FwCioSwitchInputBlock (
+    IN block : ^FwCioBlock,
+)
 
 EXTERN FN (FwApiPutCharacterF) FwCioPutCharacter (
     IN byte : UWORD,

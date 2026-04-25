@@ -4,6 +4,10 @@
 
 #INCLUDE "<inc>/a4x.hjk"
 
+EXTERN FN FwInitializeFramebuffer ()
+EXTERN FN FwInitializeKeyboard ()
+EXTERN FN FwInitializeGui ()
+
 PUBLIC FwDeviceDatabase : FwDeviceDatabaseRecord
 
 PUBLIC FwProcessorPingPongTable : ULONG[FW_EXTENDED_PROCESSOR_MAX]
@@ -278,6 +282,10 @@ FN FwProbeAmtsu ()
 
         i += 1
     END
+
+    // Locate keyboard.
+
+    FwInitializeKeyboard ()
 END
 
 FN FwProbeEbus ()
@@ -308,6 +316,14 @@ FN FwProbeEbus ()
         i += 1
         slotinfo += IO_EBUS_SLOT_SPACE
     END
+
+    // Initialize the framebuffer.
+
+    FwInitializeFramebuffer ()
+
+    // Draw the GUI and initialize the video console.
+
+    FwInitializeGui ()
 END
 
 EXTERN FN FwProbeDks ()
@@ -324,13 +340,13 @@ FN FwProbeDevices ()
         0, // ulong
     )
 
+    FwProbeEbus ()
+
+    FwProbeAmtsu ()
+
     FwProbeProcessors ()
 
     FwProbeRam ()
 
     FwProbeDks ()
-
-    FwProbeAmtsu ()
-
-    FwProbeEbus ()
 END

@@ -19,22 +19,43 @@ FN FwCioEarlyInitialize ()
     // Just hardwire the character I/O block to the serial block, since we don't
     // know what we have yet.
 
-    FwCurrentCioOutputBlock = &FwSerialCioBlock
-    FwCurrentCioInputBlock = &FwSerialCioBlock
+    FwCioSwitchInputBlock ( &FwSerialCioBlock )
+    FwCioPushOutputBlock ( &FwSerialCioBlock )
 END
 
 FN (FwApiPutCharacterF) FwCioPutCharacter (
     IN byte : UWORD,
 )
 
-    IF byte == '\n' THEN
-        FwCurrentCioOutputBlock^.Write ( '\r' )
-    END
+    block := FwCurrentCioOutputBlock
 
-    FwCurrentCioOutputBlock^.Write ( byte )
+    WHILE block DO
+        IF byte == '\n' THEN
+            block^.Write ( '\r' )
+        END
+
+        block^.Write ( byte )
+
+        block = block^.Next
+    END
 END
 
 FN (FwApiGetCharacterF) FwCioGetCharacter () : UWORD
 
     RETURN FwCurrentCioInputBlock^.Read ()
+END
+
+FN FwCioPushOutputBlock (
+    IN block : ^FwCioBlock,
+)
+
+    block^.Next = FwCurrentCioOutputBlock
+    FwCurrentCioOutputBlock = block
+END
+
+FN FwCioSwitchInputBlock (
+    IN block : ^FwCioBlock,
+)
+
+    FwCurrentCioInputBlock = block
 END

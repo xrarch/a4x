@@ -4,6 +4,10 @@
 
 #INCLUDE "<inc>/a4x.hjk"
 
+EXTERN FN FwGuiEnteringBootProgram (
+    IN bootinfo : ^FwDiskBootInfo,
+)
+
 EXTERN _text_size : UBYTE
 EXTERN _data_size : UBYTE
 
@@ -168,6 +172,8 @@ FN FwBootPartition (
         LEAVE
     END
 
+    FwGuiEnteringBootProgram ( bootinfo )
+
     // We modified the instruction stream, so sweep the icache.
 
     FwxSweepIcache ()
@@ -182,6 +188,8 @@ FN FwBootPartition (
         partition, // bootpartition
         args, // args
     )
+
+    FwGuiEnteringBootProgram ( NULLPTR )
 
     RtlPrint ( "Boot program returned %d\n", ret )
 END

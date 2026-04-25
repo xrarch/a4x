@@ -133,9 +133,6 @@ FN (FwCioReadF) FwKeyboardRead () : UWORD
     RETURN FwKeyboardLayout[code]
 END
 
-// Force the table into the text section so that it stays in ROM.
-
-#SECTION "text"
 PUBLIC FwKeyboardCioBlock : FwCioBlock = {
     [Write] = NULLPTR,
     [Read] = &FwKeyboardRead,
