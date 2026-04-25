@@ -690,6 +690,7 @@ FN FwDrawWindowBorder (
     IN y : UWORD,
     IN w : UWORD,
     IN h : UWORD,
+    IN fill : UWORD,
 )
 
     IF w < 5 THEN
@@ -740,17 +741,76 @@ FN FwDrawWindowBorder (
         1, // h
     )
 
-    FvDrawFilledRectangle (
-        222, // color
-        x + 2, // x
+    IF fill THEN
+        FvDrawFilledRectangle (
+            222, // color
+            x + 2, // x
+            y + 2, // y
+            w - 4, // w
+            h - 4, // h
+        )
+    END
+END
+
+FN FwEraseWindowBorder (
+    IN x : UWORD,
+    IN y : UWORD,
+    IN w : UWORD,
+    IN h : UWORD,
+    IN color : UWORD
+)
+
+    IF w < 5 THEN
+        LEAVE
+    END
+
+    IF h < 5 THEN
+        LEAVE
+    END
+
+    FvDrawEmptyRectangle (
+        color, // color
+        x, // x
+        y, // y
+        w, // w
+        h, // h
+    )
+
+    FvDrawEmptyRectangle (
+        color, // color
+        x + 1, // x
+        y + 1, // y
+        w - 3, // w
+        1, // h
+    )
+
+    FvDrawEmptyRectangle (
+        color, // color
+        x + 1, // x
         y + 2, // y
-        w - 4, // w
+        1, // w
         h - 4, // h
+    )
+
+    FvDrawEmptyRectangle (
+        color, // color
+        x + w - 2, // x
+        y + 1, // y
+        1, // w
+        h - 3, // h
+    )
+
+    FvDrawEmptyRectangle (
+        color, // color
+        x + 1, // x
+        y + h - 2, // y
+        w - 2, // w
+        1, // h
     )
 END
 
-#DEFINE TILE_WIDTH 120
-#DEFINE TILE_HEIGHT 128
+#DEFINE TILE_WIDTH 100
+#DEFINE TILE_HEIGHT 108
 
 FN FwBlitSplash (
     IN color : UBYTE,
@@ -877,6 +937,7 @@ FN FwInitializeGui ()
         FwSidebarY, // y
         FwSidebarWidth, // w
         FwSidebarHeight, // h
+        TRUE, // fill
     )
 
     fbox := &FwDeviceDatabase.ConsoleBox
@@ -943,6 +1004,7 @@ FN FwGuiEnteringBootProgram (
             FwOsBannerY, // y
             FwSidebarWidth - 10, // w
             h, // h
+            TRUE, // fill
         )
 
         rightedgeofbadge := FwBlitSplash (
@@ -1122,6 +1184,7 @@ FN FwDrawNodeInfo ()
                     y, // y
                     w, // w
                     h, // h
+                    TRUE, // fill
                 )
 
                 RtlFormat (
@@ -1400,4 +1463,228 @@ FN (FwCioWriteF) FwVideoConsoleWrite (
 
     FwDeviceDatabase.ConsoleBox.CursorX = FwCursorX * FwVcFont.Width
     FwDeviceDatabase.ConsoleBox.CursorY = FwCursorY * FwVcFont.Height
+END
+
+FwBootPickerX : UINT
+FwBootPickerY : UINT
+FwBootPickerIndex : UBYTE
+
+FN FwDrawTile (
+    IN index : UWORD,
+    IN selected : UBYTE,
+)
+
+    bootable := FwBootableTable[index]
+
+    col := index % 4
+    row := index / 4
+
+    x := FwBootPickerX + (col * TILE_WIDTH)
+    y := FwBootPickerY + (row * TILE_HEIGHT)
+
+    IF selected THEN
+        FwDrawWindowBorder (
+            x + 2, // x
+            y + 2, // y
+            TILE_WIDTH - 4, // w
+            TILE_HEIGHT - 4, // h
+            FALSE, // fill
+        )
+    
+    ELSE
+        FwEraseWindowBorder (
+            x + 2, // x
+            y + 2, // y
+            TILE_WIDTH - 4, // w
+            TILE_HEIGHT - 4, // h
+            222, // color
+        )
+    END
+
+    FwBlitSplash (
+        0x00, // color
+        &bootable^.BootInfo^.Badge[0], // bmp
+        x + (TILE_WIDTH - 64) / 2, // x
+        y + 8, // y
+    )
+
+    osname := &bootable^.BootInfo^.OsName[0]
+
+    FvDrawString (
+        &FwVcFont, // font
+        osname, // string
+        0x00, // fgcolor
+        -1, // bgcolor
+        x + (TILE_WIDTH - (RtlMeasureString ( osname ) * FwVcFont.Width)) / 2, // x
+        y + 8 + 64, // y
+        -1, // w
+    )
+
+    textbuf : UBYTE[64]
+
+    RtlFormat (
+        &textbuf[0], // dest
+        64, // bufsize
+        "dks%ds%d", // fmt
+        bootable^.Id,
+        bootable^.PartitionId,
+    )
+
+    FvDrawString (
+        &FwVcFont, // font
+        &textbuf[0], // string
+        0x00, // fgcolor
+        -1, // bgcolor
+        x + (TILE_WIDTH - (RtlMeasureString ( &textbuf[0] ) * FwVcFont.Width)) / 2, // x
+        y + 8 + 64 + FwVcFont.Height, // y
+        -1, // w
+    )
+END
+
+FN FwBootPicker ()
+
+   // Draw a boot picker on the screen.
+
+    IF NOT FwDeviceDatabase.Framebuffer.Address THEN
+        LEAVE
+    END
+
+    IF NOT FwDeviceDatabase.Keyboard.Id THEN
+        LEAVE
+    END
+
+    IF FwDeviceDatabase.BootableCount < 2 THEN
+        // Zero or only one bootable device. Don't bother.
+
+        LEAVE
+    END
+
+    IF FwDeviceDatabase.BootableCount > 6 THEN
+        LEAVE
+    END
+
+    // Figure out rows and columns of the boot picker such that there are 4
+    // bootable devices on each row.
+
+    rows := (FwDeviceDatabase.BootableCount + 2) / 3
+    cols := FwDeviceDatabase.BootableCount % 3
+
+    IF rows > 1 OR NOT cols THEN
+        cols = 3
+    END
+
+    boxwidth := cols * TILE_WIDTH + 8
+    boxheight := rows * TILE_HEIGHT + 8 + 3 * FwVcFont.Height + 8
+    boxx := (FwDeviceDatabase.Framebuffer.Width - boxwidth) / 2
+    boxy := (FwDeviceDatabase.Framebuffer.Height - boxheight) / 2
+
+    FwBootPickerX = boxx + 4
+    FwBootPickerY = boxy + 12 + 3 * FwVcFont.Height
+
+    FwDrawWindowBorder (
+        boxx, // x
+        boxy, // y
+        boxwidth, // w
+        boxheight, // h
+        TRUE, // fill
+    )
+
+    str := "Use left and right arrow keys to select a
+bootable partition. Strike enter to boot.
+Strike ESC to enter the command monitor."
+
+    len := 0
+
+    s := str
+
+    WHILE s^ AND s^ != '\n' DO
+        s += 1
+        len += 1
+    END
+
+    FvDrawString (
+        &FwVcFont, // font
+        str, // string
+        0x00, // fgcolor
+        -1, // bgcolor
+        boxx + 4 + (boxwidth - len * FwVcFont.Width) / 2, // x
+        boxy + 4 + 4, // y
+        -1, // w
+    )
+
+    // Draw the tiles.
+
+    i := 0
+
+    WHILE i < FwDeviceDatabase.BootableCount DO
+        FwDrawTile (
+            i, // index
+            i == 0, // selected
+        )
+
+        i += 1
+    END
+
+    WHILE TRUE DO
+        scan := FwKeyboardReadScancode ()
+
+        IF scan == -1 THEN
+            CONTINUE
+        END
+
+        IF scan == 53 THEN
+            // Escape.
+
+            BREAK
+
+        ELSEIF scan == 54 THEN
+            // Left arrow.
+
+            IF FwBootPickerIndex != 0 THEN
+                FwDrawTile (
+                    FwBootPickerIndex, // index
+                    FALSE, // selected
+                )
+
+                FwBootPickerIndex -= 1
+
+                FwDrawTile (
+                    FwBootPickerIndex, // index
+                    TRUE, // selected
+                )
+            END
+
+        ELSEIF scan == 55 THEN
+            // Right arrow.
+
+            IF FwBootPickerIndex != FwDeviceDatabase.BootableCount - 1 THEN
+                FwDrawTile (
+                    FwBootPickerIndex, // index
+                    FALSE, // selected
+                )
+
+                FwBootPickerIndex += 1
+
+                FwDrawTile (
+                    FwBootPickerIndex, // index
+                    TRUE, // selected
+                )
+            END
+
+        ELSEIF scan == 50 THEN
+            // Return.
+
+            FwSelectedBootPartition = FwBootableTable[FwBootPickerIndex]
+
+            BREAK
+        END
+    END
+
+    FvDrawFilledRectangle (
+        FW_VC_BG_COLOR, // color
+        boxx, // x
+        boxy, // y
+        boxwidth, // w
+        boxheight, // h
+    )
 END

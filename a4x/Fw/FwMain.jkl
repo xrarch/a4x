@@ -11,6 +11,7 @@ EXTERN FN FwInitializeNvram ()
 EXTERN FN FwTextUserInterface ()
 EXTERN FN FwWaitForProcessors ()
 EXTERN FN FwFillSidebar ()
+EXTERN FN FwBootPicker ()
 
 EXTERN FN FwInitializeInterrupts (
     IN procid : ULONG,
@@ -65,6 +66,10 @@ FN FwMain ()
     // Wait for remote processors.
 
     FwWaitForProcessors ()
+
+    // Open the boot picker, if appropriate.
+
+    FwBootPicker ()
 
     // Decide whether to auto-boot or enter the command monitor.
 

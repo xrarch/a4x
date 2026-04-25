@@ -140,10 +140,14 @@ FN FwBootPartition (
 
     bootinfo := partition^.BootInfo
 
+    FwGuiEnteringBootProgram ( bootinfo )
+
     IF bootinfo^.IsLegacy THEN
         // We have to chain load a3x to load this operating system.
 
         FwChainBoot ( partition )
+
+        FwGuiEnteringBootProgram ( NULLPTR )
 
         LEAVE
     END
@@ -159,6 +163,9 @@ FN FwBootPartition (
         bootinfo^.BootstrapSector, // sector
         bootinfo^.BootstrapCount, // count
     ) THEN
+
+        FwGuiEnteringBootProgram ( NULLPTR )
+
         RtlPrint ( "dks%ds%d: Failed to read bootstrap program\n",
             partition^.Id, partition^.PartitionId )
 
@@ -166,13 +173,13 @@ FN FwBootPartition (
     END
 
     IF buffer^ != A4X_BOOTSTRAP_MAGIC THEN
+        FwGuiEnteringBootProgram ( NULLPTR )
+
         RtlPrint ( "dks%ds%d: Bootstrap program is corrupted\n",
             partition^.Id, partition^.PartitionId )
 
         LEAVE
     END
-
-    FwGuiEnteringBootProgram ( bootinfo )
 
     // We modified the instruction stream, so sweep the icache.
 
