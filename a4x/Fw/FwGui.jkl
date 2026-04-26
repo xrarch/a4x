@@ -915,7 +915,7 @@ FN FwInitializeGui ()
     // for the informational sidebar. Use the rest of the space for the video
     // console.
 
-    FwSidebarX = 0
+    FwSidebarX = w - FW_SIDEBAR_WIDTH
     FwSidebarY = 0
     FwSidebarWidth = FW_SIDEBAR_WIDTH
     FwSidebarHeight = h
@@ -924,7 +924,7 @@ FN FwInitializeGui ()
     FwSidebarTopDownAllocationY = 4
     FwSidebarBottomUpAllocationY = FwSidebarHeight - 4
 
-    FwVideoConsoleX = FwSidebarX + FW_SIDEBAR_WIDTH + FW_VC_MARGIN
+    FwVideoConsoleX = FW_VC_MARGIN
     FwVideoConsoleY = FW_VC_MARGIN
     FwVideoConsoleW =
         (w - FW_SIDEBAR_WIDTH - FW_VC_MARGIN * 2) / FwVcFont.Width
