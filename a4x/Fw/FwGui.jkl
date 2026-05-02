@@ -924,11 +924,13 @@ FN FwInitializeGui ()
     FwSidebarTopDownAllocationY = 4
     FwSidebarBottomUpAllocationY = FwSidebarHeight - 4
 
+    vcw := (w - FW_SIDEBAR_WIDTH - FW_VC_MARGIN * 2)
+    vch := (h - FW_VC_MARGIN * 2)
+
     FwVideoConsoleX = FW_VC_MARGIN
     FwVideoConsoleY = FW_VC_MARGIN
-    FwVideoConsoleW =
-        (w - FW_SIDEBAR_WIDTH - FW_VC_MARGIN * 2) / FwVcFont.Width
-    FwVideoConsoleH = (h - FW_VC_MARGIN * 2) / FwVcFont.Height
+    FwVideoConsoleW = vcw / FwVcFont.Width
+    FwVideoConsoleH = vch / FwVcFont.Height
 
     // Draw the sidebar.
 
@@ -943,8 +945,8 @@ FN FwInitializeGui ()
     fbox := &FwDeviceDatabase.ConsoleBox
     fbox^.XCoordinate = FwVideoConsoleX
     fbox^.YCoordinate = FwVideoConsoleY
-    fbox^.Width = FwVideoConsoleW * FwVcFont.Width
-    fbox^.Height = FwVideoConsoleH * FwVcFont.Height
+    fbox^.Width = vcw
+    fbox^.Height = vch
     fbox^.BgColor = FW_VC_BG_COLOR
     fbox^.FgColor = FW_VC_FG_COLOR
 
