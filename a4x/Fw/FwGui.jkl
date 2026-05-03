@@ -1557,6 +1557,8 @@ FN FwDrawTile (
     )
 END
 
+#DEFINE FW_BOOT_PICKER_SIDE_MARGIN 8
+
 FN FwBootPicker ()
 
    // Draw a boot picker on the screen.
@@ -1589,21 +1591,8 @@ FN FwBootPicker ()
         cols = 3
     END
 
-    boxwidth := cols * TILE_WIDTH + 8
+    boxwidth := cols * TILE_WIDTH + FW_BOOT_PICKER_SIDE_MARGIN * 2
     boxheight := rows * TILE_HEIGHT + 8 + 3 * FwVcFont.Height + 8
-    boxx := (FwDeviceDatabase.Framebuffer.Width - boxwidth) / 2
-    boxy := (FwDeviceDatabase.Framebuffer.Height - boxheight) / 2
-
-    FwBootPickerX = boxx + 4
-    FwBootPickerY = boxy + 12 + 3 * FwVcFont.Height
-
-    FwDrawWindowBorder (
-        boxx, // x
-        boxy, // y
-        boxwidth, // w
-        boxheight, // h
-        TRUE, // fill
-    )
 
     str := "Use left and right arrow keys to select a
 bootable partition. Strike enter to boot.
@@ -1618,12 +1607,30 @@ Strike ESC to enter the command monitor."
         len += 1
     END
 
+    IF boxwidth < len * FwVcFont.Width THEN
+        boxwidth = len * FwVcFont.Width + FW_BOOT_PICKER_SIDE_MARGIN * 2
+    END
+
+    boxx := (FwDeviceDatabase.Framebuffer.Width - boxwidth) / 2
+    boxy := (FwDeviceDatabase.Framebuffer.Height - boxheight) / 2
+
+    FwBootPickerX = boxx + (boxwidth - cols * TILE_WIDTH) / 2
+    FwBootPickerY = boxy + 12 + 3 * FwVcFont.Height
+
+    FwDrawWindowBorder (
+        boxx, // x
+        boxy, // y
+        boxwidth, // w
+        boxheight, // h
+        TRUE, // fill
+    )
+
     FvDrawString (
         &FwVcFont, // font
         str, // string
         0x00, // fgcolor
         -1, // bgcolor
-        boxx + 4 + (boxwidth - len * FwVcFont.Width) / 2, // x
+        boxx + (boxwidth - len * FwVcFont.Width) / 2, // x
         boxy + 4 + 4, // y
         -1, // w
     )
