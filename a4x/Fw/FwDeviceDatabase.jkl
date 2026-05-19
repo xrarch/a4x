@@ -319,7 +319,17 @@ FN FwProbeEbus ()
     i := 0
 
     WHILE i < 7 DO
-        IF slotinfo^.Magic == IO_EBUS_MAGIC THEN
+        FwProbeCheck = 1
+
+        FwBusErrorCallback = &FwProbeBusError
+
+        FwxProbeUlong ( &slotinfo^.Magic )
+
+        FwBusErrorCallback = NULLPTR
+
+        FwxMemoryBarrier ()
+
+        IF FwProbeCheck AND slotinfo^.Magic == IO_EBUS_MAGIC THEN
             FwDeviceDatabase.Boards[i].Address = slotinfo
 
             FwDeviceDatabase.Boards[i].BoardId = slotinfo^.BoardId
