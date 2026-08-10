@@ -1161,11 +1161,8 @@ FN FwDrawNodeInfo ()
 
     // Draw info boxes for nodes and CPUs.
 
-    IF FwDeviceDatabase.ProcessorCount == 1 AND
-        FwDeviceDatabase.NodeCount == 1 THEN
-
-        LEAVE
-    END
+    solo := FwDeviceDatabase.ProcessorCount == 1 AND
+        FwDeviceDatabase.NodeCount == 1
 
     i := 0
     buf : UBYTE[32]
@@ -1188,7 +1185,7 @@ FN FwDrawNodeInfo ()
 
             procs := FwDeviceDatabase.Nodes[i].ProcessorCount
 
-            IF procs THEN
+            IF procs AND NOT solo THEN
                 h += 42
             END
 
@@ -1221,6 +1218,10 @@ FN FwDrawNodeInfo ()
                     -1, // w
                 )
 
+                IF solo THEN
+                    BREAK
+                END
+
                 horizpixpercpu := (w - 8) / 4
 
                 x += (w - horizpixpercpu * procs) / 2
@@ -1251,7 +1252,9 @@ FN FwDrawNodeInfo ()
         i += 1
     END
 
-    FwGuiSetCpuActive ( 0 )
+    IF NOT solo THEN
+        FwGuiSetCpuActive ( 0 )
+    END
 END
 
 FN FwFillSidebar ()
