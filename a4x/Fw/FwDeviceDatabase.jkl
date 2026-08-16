@@ -357,6 +357,36 @@ FN FwProbeEbus ()
     FwInitializeGui ()
 END
 
+FN FwFillNodeDistances ()
+
+    // Fill the node distance array. This is a 2D array where the value at
+    // NodeDistances[X][Y] describes the relative cost of a cache miss
+    // that is incurred by node X while accessing memory on node Y.
+    //
+    // XR/frame connects its 4 nodes in a bidirectional ring topology, so we
+    // can fill the array in a static manner here.
+    //
+    // 0 <-> 1 <-> 2 <-> 3 <-> 0 <-> 1 <-> 2 <-> 3
+
+    i := 0
+
+    WHILE i < FW_NODE_MAX DO
+        j := 0
+
+        WHILE j < FW_NODE_MAX DO
+            IF (i - j) % FW_NODE_MAX > (FW_NODE_MAX / 2) THEN
+                FwDeviceDatabase.NodeDistances[i][j] = (j - i) % FW_NODE_MAX
+            ELSE
+                FwDeviceDatabase.NodeDistances[i][j] = (i - j) % FW_NODE_MAX
+            END
+
+            j += 1
+        END
+
+        i += 1
+    END
+END
+
 EXTERN FN FwProbeDks ()
 
 FN FwProbeDevices ()
@@ -380,4 +410,6 @@ FN FwProbeDevices ()
     FwProbeRam ()
 
     FwProbeDks ()
+
+    FwFillNodeDistances ()
 END

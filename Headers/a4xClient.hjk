@@ -127,6 +127,8 @@ STRUCT FwDeviceDatabaseRecord
     Reserved2 : UBYTE,
 
     ConsoleBox : FwConsoleBoxRecord,
+
+    NodeDistances : UINT[FW_NODE_MAX][FW_NODE_MAX],
 END
 
 FNPTR FwKickProcessorCallbackF (
