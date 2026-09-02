@@ -90,7 +90,7 @@ FN FwProcessorStartup (
 
     // Wait for the ping from the boot processor.
 
-    WHILE FwProcessorPingPongTable[procid] != FW_PING_PROCESSOR_CODE DO
+    WHILE VOLATILE FwProcessorPingPongTable[procid] != FW_PING_PROCESSOR_CODE DO
         FwxSpinPause ()
         BARRIER
     END
@@ -103,7 +103,7 @@ FN FwProcessorStartup (
 
     // Send the pong.
 
-    FwProcessorPingPongTable[procid] = FW_PONG_PROCESSOR_CODE
+    VOLATILE FwProcessorPingPongTable[procid] = FW_PONG_PROCESSOR_CODE
 
     // Here we will wait for IPIs forever.
 

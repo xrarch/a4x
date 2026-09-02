@@ -13,11 +13,11 @@ FN (FwCioWriteF) FwSerialWrite (
     cmdport := CAST IO_SERIAL_CMD TO ^UBYTE
     dataport := CAST IO_SERIAL_DATA TO ^UBYTE
 
-    WHILE cmdport^ DO
+    WHILE VOLATILE cmdport^ DO
         BARRIER
     END
 
-    dataport^ = byte
+    VOLATILE dataport^ = byte
 
     BARRIER
 END
@@ -29,7 +29,7 @@ FN (FwCioReadF) FwSerialRead () : UWORD
 
     dataport := CAST IO_SERIAL_DATA TO ^UINT
 
-    char := dataport^
+    char := VOLATILE dataport^
 
     IF char == 0xFFFF THEN
         RETURN -1

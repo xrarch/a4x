@@ -51,13 +51,13 @@ FN FwKeyboardReadScancode () : UWORD
 
     id := FwDeviceDatabase.Keyboard.Id
 
-    amtsu^.Select = id
+    VOLATILE amtsu^.Select = id
     BARRIER
 
-    amtsu^.Cmd = IO_KEYBOARD_READ
+    VOLATILE amtsu^.Cmd = IO_KEYBOARD_READ
     BARRIER
 
-    code := amtsu^.Data0
+    code := VOLATILE amtsu^.Data0
 
     IF code == 0xFFFF THEN
         RETURN -1
@@ -78,13 +78,13 @@ FN (FwCioReadF) FwKeyboardRead () : UWORD
 
     id := FwDeviceDatabase.Keyboard.Id
 
-    amtsu^.Select = id
+    VOLATILE amtsu^.Select = id
     BARRIER
 
-    amtsu^.Cmd = IO_KEYBOARD_READ
+    VOLATILE amtsu^.Cmd = IO_KEYBOARD_READ
     BARRIER
 
-    code := amtsu^.Data0
+    code := VOLATILE amtsu^.Data0
 
     IF code == 0xFFFF THEN
         RETURN -1

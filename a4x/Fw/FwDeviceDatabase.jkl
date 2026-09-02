@@ -34,7 +34,7 @@ FN FwWaitForProcessors ()
 
             maxloops := FW_MAXIMUM_PINGPONG_LOOPS
 
-            WHILE FwProcessorPingPongTable[i] != FW_PONG_PROCESSOR_CODE AND
+            WHILE VOLATILE FwProcessorPingPongTable[i] != FW_PONG_PROCESSOR_CODE AND
                 maxloops DO
 
                 // PAUSE to allow the remote processor a shot.
@@ -99,14 +99,14 @@ FN FwProbeProcessors ()
     WHILE i < FW_EXTENDED_PROCESSOR_MAX DO
         lsic := &(CAST IO_LSIC_BASE TO ^IoLsicTable)^.Table[i]
 
-        FwProbeCheck = 1
+        VOLATILE FwProbeCheck = 1
         BARRIER
 
         FwxProbeUlong ( &lsic^.Ipl )
 
         FwxMemoryBarrier ()
 
-        IF FwProbeCheck THEN
+        IF VOLATILE FwProbeCheck THEN
             // There is a processor here.
 
             // Send a reset IPI in case this is a soft reset and the remote
@@ -127,7 +127,7 @@ FN FwProbeProcessors ()
             // Set the pingpong table entry for this processor to tell it that
             // we're waiting for a pong.
 
-            FwProcessorPingPongTable[i] = FW_PING_PROCESSOR_CODE
+            VOLATILE FwProcessorPingPongTable[i] = FW_PING_PROCESSOR_CODE
             BARRIER
 
             // Set the processor present.
@@ -195,7 +195,7 @@ FN FwProbeRamSlot (
 
     FwBusErrorCallback = &FwProbeBusError
 
-    FwProbeCheck = 1
+    VOLATILE FwProbeCheck = 1
     BARRIER
 
     // We start probing at the end of the page frame so that we make sure we
@@ -204,16 +204,16 @@ FN FwProbeRamSlot (
     base += 0xFFF
 
     WHILE base < max DO
-        base^ = 0xA5
+        VOLATILE base^ = 0xA5
         BARRIER
 
         FwxMemoryBarrier ()
 
-        IF NOT FwProbeCheck THEN
+        IF NOT ( VOLATILE FwProbeCheck ) THEN
             BREAK
         END
 
-        IF base^ != 0xA5 THEN
+        IF VOLATILE base^ != 0xA5 THEN
             // There was no bus error but that was erroneous.
             // Something weird is up! Don't include this page frame.
 
@@ -295,10 +295,10 @@ FN FwProbeAmtsu ()
     i := 1
 
     WHILE i < 16 DO
-        amtsu^.Select = i
+        VOLATILE amtsu^.Select = i
         BARRIER
 
-        FwDeviceDatabase.Amtsu[i].Mid = amtsu^.Mid
+        FwDeviceDatabase.Amtsu[i].Mid = VOLATILE amtsu^.Mid
         BARRIER
 
         i += 1

@@ -35,25 +35,25 @@ FN FwProbeDks ()
 
     dks := CAST IO_DKS_BASE TO ^IoDks
 
-    WHILE dks^.Cmd DO
+    WHILE VOLATILE dks^.Cmd DO
         BARRIER
     END
 
     i := 0
 
     WHILE i < IO_DKS_MAX DO
-        dks^.Data0 = i
+        VOLATILE dks^.Data0 = i
         BARRIER
 
-        dks^.Cmd = IO_DKS_POLL
+        VOLATILE dks^.Cmd = IO_DKS_POLL
         BARRIER
 
-        WHILE dks^.Cmd DO
+        WHILE VOLATILE dks^.Cmd DO
             BARRIER
         END
 
-        present := dks^.Data0
-        sectors := dks^.Data1
+        present := VOLATILE dks^.Data0
+        sectors := VOLATILE dks^.Data1
         BARRIER
 
         IF present & 1 THEN
@@ -128,59 +128,59 @@ FN (FwApiReadDiskF) FwReadDisk (
 
     dks := CAST IO_DKS_BASE TO ^IoDks
 
-    WHILE dks^.Cmd DO
+    WHILE VOLATILE dks^.Cmd DO
         BARRIER
     END
 
     // Select the disk ID.
 
-    dks^.Data0 = id
+    VOLATILE dks^.Data0 = id
     BARRIER
 
-    dks^.Cmd = IO_DKS_SELECT
+    VOLATILE dks^.Cmd = IO_DKS_SELECT
     BARRIER
 
-    WHILE dks^.Cmd DO
+    WHILE VOLATILE dks^.Cmd DO
         BARRIER
     END
 
     // Set the transfer count to 1 sector.
 
-    dks^.Data0 = 1
+    VOLATILE dks^.Data0 = 1
     BARRIER
 
-    dks^.Cmd = IO_DKS_TRC
+    VOLATILE dks^.Cmd = IO_DKS_TRC
     BARRIER
 
-    WHILE dks^.Cmd DO
+    WHILE VOLATILE dks^.Cmd DO
         BARRIER
     END
 
     WHILE count DO
         // Set the transfer address.
 
-        dks^.Data0 = CAST buffer TO ULONG
+        VOLATILE dks^.Data0 = CAST buffer TO ULONG
         BARRIER
 
-        dks^.Cmd = IO_DKS_TRA
+        VOLATILE dks^.Cmd = IO_DKS_TRA
         BARRIER
 
-        WHILE dks^.Cmd DO
+        WHILE VOLATILE dks^.Cmd DO
             BARRIER
         END
 
         // Perform the read.
 
-        dks^.Data0 = sector
+        VOLATILE dks^.Data0 = sector
         BARRIER
 
-        dks^.Cmd = IO_DKS_READ
+        VOLATILE dks^.Cmd = IO_DKS_READ
         BARRIER
 
         // Poll for transfer completion (we do not generally use interrupts in
         // the firmware).
 
-        WHILE dks^.Cmd DO
+        WHILE VOLATILE dks^.Cmd DO
             BARRIER
         END
 

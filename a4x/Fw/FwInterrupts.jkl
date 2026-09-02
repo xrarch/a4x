@@ -16,11 +16,11 @@ FN FwInitializeInterrupts (
 
     mylsic := &(CAST IO_LSIC_BASE TO ^IoLsicTable)^.Table[procid]
 
-    mylsic^.Mask0 = 0xFFFFFFFD
-    mylsic^.Mask1 = 0xFFFFFFFF
-    mylsic^.Pending0 = 0
-    mylsic^.Pending1 = 0
-    mylsic^.Ipl = 63
+    VOLATILE mylsic^.Mask0 = 0xFFFFFFFD
+    VOLATILE mylsic^.Mask1 = 0xFFFFFFFF
+    VOLATILE mylsic^.Pending0 = 0
+    VOLATILE mylsic^.Pending1 = 0
+    VOLATILE mylsic^.Ipl = 63
     BARRIER
 
     // Now enable interrupts on the current processor.
@@ -65,7 +65,7 @@ FN FwSendIpi (
 
         timeout := 50000000
 
-        WHILE NOT packet^.Acknowledged AND timeout DO
+        WHILE NOT ( VOLATILE packet^.Acknowledged ) AND timeout DO
             BARRIER
 
             timeout -= 1
@@ -99,7 +99,7 @@ FN FwServiceIpi (
 
     lsic := &(CAST IO_LSIC_BASE TO ^IoLsicTable)^.Table[procid]
 
-    lsic^.ClaimComplete = 1
+    VOLATILE lsic^.ClaimComplete = 1
     BARRIER
 
     IF FwProcessorResetRequested[procid] THEN
