@@ -321,11 +321,11 @@ FN FwProbeEbus ()
     WHILE i < 7 DO
         FwProbeCheck = 1
 
-        FwBusErrorCallback = &FwProbeBusError
+        VOLATILE FwBusErrorCallback = &FwProbeBusError
 
         FwxProbeUlong ( &slotinfo^.Magic )
 
-        FwBusErrorCallback = NULLPTR
+        VOLATILE FwBusErrorCallback = NULLPTR
 
         FwxMemoryBarrier ()
 
